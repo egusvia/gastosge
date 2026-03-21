@@ -616,6 +616,14 @@ input,select,textarea,button{font-family:var(--font)}
                 </select>
               </div>
             </div>
+            <div class="fg">
+              <div class="field"><label>Medio de pago</label>
+                <select id="g-hogar-medio">
+                  <option value="efectivo">💵 Efectivo</option>
+                  <option value="diners">💳 Diners Club</option>
+                </select>
+              </div>
+            </div>
           </div>
 
 
@@ -1474,12 +1482,22 @@ async function addGasto(){
   } else if(gastoTipo==='hogar'){
     const hDepto=document.getElementById('g-hogar-depto').value;
     const hCat=document.getElementById('g-hogar-cat').value;
+    const hMedio=document.getElementById('g-hogar-medio').value;
     cat='Hogar';
     extra.hogarDepto=hDepto;
     extra.motivo=hCat;
-    // También guardar en hoja Hogar para el módulo resumen
-    const hObj={depto:hDepto,categoria:hCat,descripcion:desc||hCat,monto:String(monto),fecha,notas};
-    api('addHogar',{hogar:hObj}).then(r=>{if(r&&r.ok)hogarGastos.unshift({...hObj,id:r.id,monto});}).catch(()=>{});
+    // Guardar con el tipo real (efectivo/diners) para que sume en el módulo correcto
+    const txHogar={id:String(Date.now()),fecha,descripcion:desc||hCat,monto:String(monto),tipo:hMedio,categoria:'Hogar',hogarDepto:hDepto,motivo:hCat,notas};
+    try{
+      await api('add',{tx:txHogar});
+      txs.unshift({...txHogar,amount:monto});
+      // También guardar en hoja Hogar para el módulo resumen
+      const hObj={depto:hDepto,categoria:hCat,descripcion:desc||hCat,monto:String(monto),fecha,notas};
+      api('addHogar',{hogar:hObj}).then(r=>{if(r&&r.ok)hogarGastos.unshift({...hObj,id:r.id,monto});}).catch(()=>{});
+      clearGasto();renderRecent();updateSidebar();toast('✅ Gasto de hogar registrado');
+    }
+    finally{btn.disabled=false;btn.textContent='💾 Registrar gasto';}
+    return;
   } else if(gastoTipo==='hormiga'){
     const medio=document.getElementById('g-hormiga-medio').value;
     cat=document.getElementById('g-hormiga-cat').value;
@@ -1541,9 +1559,8 @@ function esDiners(t){
   return false;
 }
 function esEfectivo(t){
-  // Es efectivo si: tipo efectivo, hogar sin diners, o taxi pagado en efectivo
   if(t.tipo==='efectivo') return true;
-  if(t.tipo==='hogar') return true; // hogar siempre se paga en efectivo por ahora
+  if(t.tipo==='hogar') return true; // registros hogar sin medio especificado = efectivo
   if(t.tipo==='taxi'&&t.taxiPago==='Efectivo') return true;
   return false;
 }
