@@ -1198,8 +1198,11 @@ async function loadAll(){
     config=all.config||{};
     recurrentes=all.recurrentes||[];
     hogarGastos=(all.hogar||[]).map(h=>({...h,monto:parseFloat(h.monto)||0}));
-    // Auto-registrar recurrentes del mes si hay alguno activo
-    if(recurrentes.some(r=>r.activo==='true')){
+    // Auto-registrar recurrentes: solo una vez por día/mes por sesión
+    const _recKey = 'ge_rec_' + thisYM();
+    const _recDone = sessionStorage.getItem(_recKey);
+    if(!_recDone && recurrentes.some(r=>r.activo==='true')){
+      sessionStorage.setItem(_recKey, '1');
       jsonp({action:'registrarRecurrentes'}).catch(()=>{});
     }
     document.getElementById('loader').style.display='none';
