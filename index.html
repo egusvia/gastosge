@@ -1298,8 +1298,8 @@ function renderDashboard(){
   document.getElementById('dash-title').textContent='Dashboard · '+mlabel(ym);
   const{inc,exp,cuotasT,saldoAnt,balance}=calcSaldo(ym);
   const mt=txOfYM(ym);
-  const efTotal=mt.filter(t=>t.tipo==='efectivo').reduce((s,t)=>s+t.amount,0);
-  const dinTotal=mt.filter(t=>t.tipo==='diners').reduce((s,t)=>s+t.amount,0)+cuotasT;
+  const efTotal=mt.filter(t=>esEfectivo(t)).reduce((s,t)=>s+t.amount,0);
+  const dinTotal=mt.filter(t=>esDiners(t)).reduce((s,t)=>s+t.amount,0)+cuotasT;
   const mobTotal=mt.filter(t=>t.tipo==='transporte'||t.tipo==='taxi').reduce((s,t)=>s+t.amount,0);
   const tecTotal=mt.filter(t=>t.tipo!=='ingreso'&&t.categoria==='Tecnología').reduce((s,t)=>s+t.amount,0);
 
@@ -1534,9 +1534,22 @@ function renderRecent(){
 // ══════════════════════════════════════════════════════
 // EFECTIVO
 // ══════════════════════════════════════════════════════
+function esDiners(t){
+  // Es Diners si: tipo diners, taxi pagado con Diners, o hormiga/hogar pagado con Diners
+  if(t.tipo==='diners') return true;
+  if(t.tipo==='taxi'&&t.taxiPago==='Diners') return true;
+  return false;
+}
+function esEfectivo(t){
+  // Es efectivo si: tipo efectivo, hogar sin diners, o taxi pagado en efectivo
+  if(t.tipo==='efectivo') return true;
+  if(t.tipo==='hogar') return true; // hogar siempre se paga en efectivo por ahora
+  if(t.tipo==='taxi'&&t.taxiPago==='Efectivo') return true;
+  return false;
+}
 function renderEfectivo(){
   const ym=thisYM();
-  const mt=txOfYM(ym).filter(t=>t.tipo==='efectivo');
+  const mt=txOfYM(ym).filter(t=>esEfectivo(t));
   const total=mt.reduce((s,t)=>s+t.amount,0);
   const bycat={};mt.forEach(t=>{bycat[t.categoria]=(bycat[t.categoria]||0)+t.amount;});
   document.getElementById('ef-cards').innerHTML=`
@@ -1549,7 +1562,7 @@ function renderEfectivo(){
     ?sorted.map(([cat,amt])=>`<div class="bar-row"><div class="bar-lbl">${CAT_ICON[cat]||'📦'} ${cat}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(amt/max*100)}%;background:${CAT_COLOR[cat]||'#6b7280'}"></div></div><div class="bar-amt">${fmt(amt)}</div></div>`).join('')
     :'<div class="empty">Sin gastos en efectivo</div>';
   const yms6=getYM6();
-  const dta=yms6.map(ym=>Math.round(txs.filter(t=>t.tipo==='efectivo'&&ymOf(t.fecha)===ym).reduce((s,t)=>s+t.amount,0)));
+  const dta=yms6.map(ym=>Math.round(txs.filter(t=>esEfectivo(t)&&ymOf(t.fecha)===ym).reduce((s,t)=>s+t.amount,0)));
   destroyChart('ef');
   charts['ef']=new Chart(document.getElementById('efChart'),{type:'line',data:{labels:yms6.map(ym=>{const[y,m]=ym.split('-');return MONTHS[+m-1].slice(0,3);}),datasets:[{data:dta,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.08)',tension:0.4,fill:true,pointRadius:3,pointBackgroundColor:'#10b981'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#5a6280',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#5a6280',font:{size:10},callback:v=>'S/'+v},grid:{color:'rgba(255,255,255,0.04)'}}}}});
   document.getElementById('ef-list').innerHTML=mt.length?mt.map(txHTML).join(''):'<div class="empty">Sin gastos en efectivo este mes</div>';
@@ -1574,7 +1587,7 @@ function renderDiners(){
   document.getElementById('dc-dcut').textContent=Math.max(0,Math.ceil((corte-now)/864e5))+' días';
   document.getElementById('dc-dpay').textContent=Math.max(0,Math.ceil((pago-now)/864e5))+' días';
   const pStart=new Date(corte.getFullYear(),corte.getMonth()-1,26);
-  const pTxs=txs.filter(t=>(t.tipo==='diners'||(t.tipo==='taxi'&&t.taxiPago==='Diners'))&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  const pTxs=txs.filter(t=>esDiners(t)&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
   const consumed=pTxs.reduce((s,t)=>s+t.amount,0);
   const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
   document.getElementById('dc-total').textContent=fmt(consumed+cuotasT);
@@ -1617,7 +1630,7 @@ function calcPago(){
   let corte=new Date(now.getFullYear(),now.getMonth(),25);
   if(now.getDate()>25)corte=new Date(now.getFullYear(),now.getMonth()+1,25);
   const pStart=new Date(corte.getFullYear(),corte.getMonth()-1,26);
-  const pTxs=txs.filter(t=>(t.tipo==='diners'||(t.tipo==='taxi'&&t.taxiPago==='Diners'))&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  const pTxs=txs.filter(t=>esDiners(t)&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
   const consumo=pTxs.reduce((s,t)=>s+t.amount,0);
   const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
   const total=consumo+cuotasT;
@@ -1764,7 +1777,10 @@ function renderPresTracking(){
   const sp={};CATS.forEach(c=>{sp[c]=mt.filter(t=>t.categoria===c).reduce((s,t)=>s+t.amount,0);});
   sp['Movilidad transporte']=mt.filter(t=>t.tipo==='transporte').reduce((s,t)=>s+t.amount,0);
   sp['Taxis']=mt.filter(t=>t.tipo==='taxi').reduce((s,t)=>s+t.amount,0);
-  sp['Diners']=mt.filter(t=>t.tipo==='diners').reduce((s,t)=>s+t.amount,0)+cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  sp['Diners']=mt.filter(t=>esDiners(t)).reduce((s,t)=>s+t.amount,0)+cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  sp['Hogar Lince']=hogarGastos.filter(h=>h.depto==='Lince'&&ymOf(h.fecha)===ym).reduce((s,h)=>s+h.monto,0);
+  sp['Hogar Villa Sol']=hogarGastos.filter(h=>h.depto==='Villa Sol'&&ymOf(h.fecha)===ym).reduce((s,h)=>s+h.monto,0);
+  sp['Hogar Huandoy']=hogarGastos.filter(h=>h.depto==='Huandoy'&&ymOf(h.fecha)===ym).reduce((s,h)=>s+h.monto,0);
   const cats=Object.keys(presupuesto);
   document.getElementById('pres-tracking').innerHTML=cats.length?cats.map(c=>{
     const spent=sp[c]||0,lim=presupuesto[c],pct=Math.min(100,Math.round(spent/lim*100));
