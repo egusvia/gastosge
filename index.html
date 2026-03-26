@@ -340,8 +340,36 @@ input,select,textarea,button{font-family:var(--font)}
 </head>
 <body>
 
+<!-- LOGIN -->
+<div id="login-screen" style="position:fixed;inset:0;background:#080b12;display:flex;align-items:center;justify-content:center;z-index:99999;padding:1.5rem">
+  <div style="width:100%;max-width:360px">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:32px;font-weight:700;letter-spacing:-1px;color:#e2e8f5;margin-bottom:6px">Gastos <span style="color:#3b82f6">GE</span></div>
+      <div style="font-size:13px;color:#5a6280">Gestión financiera personal</div>
+    </div>
+    <div style="background:#0e1320;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.75rem">
+      <div style="margin-bottom:14px">
+        <label style="font-size:10px;color:#5a6280;text-transform:uppercase;letter-spacing:0.7px;font-weight:600;display:block;margin-bottom:5px">Usuario</label>
+        <input id="login-user" type="text" placeholder="Usuario" autocomplete="username"
+          style="width:100%;background:#141928;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 12px;color:#e2e8f5;font-size:14px;outline:none;font-family:inherit"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="font-size:10px;color:#5a6280;text-transform:uppercase;letter-spacing:0.7px;font-weight:600;display:block;margin-bottom:5px">Contraseña</label>
+        <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password"
+          style="width:100%;background:#141928;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 12px;color:#e2e8f5;font-size:14px;outline:none;font-family:inherit"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="login-error" style="color:#ef4444;font-size:12px;margin-bottom:12px;display:none;text-align:center">Usuario o contraseña incorrectos</div>
+      <button onclick="doLogin()" style="width:100%;background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">
+        Ingresar
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- LOADER -->
-<div id="loader">
+<div id="loader" style="display:none">
   <div class="loader-logo">Gastos <span>GE</span></div>
   <div class="loader-bar"><div class="loader-fill"></div></div>
   <div class="loader-text">Conectando con Google Sheets...</div>
@@ -428,7 +456,8 @@ input,select,textarea,button{font-family:var(--font)}
       <span class="sync-text" id="stxt">Conectado · Google Sheets</span>
       <div class="topbar-right">
         <span id="topbar-month" style="font-size:12px;color:var(--text3)"></span>
-        <button onclick="loadAll()" class="btn btn-ghost btn-sm">↺</button>
+        <button onclick="loadAll()" class="btn btn-ghost btn-sm" title="Sincronizar">↺</button>
+        <button onclick="cerrarSesion()" class="btn btn-ghost btn-sm" title="Cerrar sesión" style="color:var(--text3)">⎋</button>
       </div>
     </div>
     <main class="main">
@@ -711,6 +740,14 @@ input,select,textarea,button{font-family:var(--font)}
           <div class="page-title">Efectivo</div>
           <div class="page-sub" id="ef-periodo-sub">Período: 1 al 31 del mes</div>
         </div>
+        <!-- Selector de mes efectivo -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div class="field" style="margin:0;flex:1;min-width:180px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;display:block;margin-bottom:4px">Ver período</label>
+            <select id="ef-mes-sel" onchange="renderEfectivo()" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:13px;width:100%;outline:none"></select>
+          </div>
+          <button onclick="efMesHoy()" class="btn btn-ghost btn-sm" style="margin-top:18px">Mes actual</button>
+        </div>
         <!-- Banner período -->
         <div id="ef-periodo-banner" style="margin-bottom:14px"></div>
         <div class="cards" id="ef-cards"></div>
@@ -821,8 +858,19 @@ input,select,textarea,button{font-family:var(--font)}
           </div>
         </div>
 
+        <!-- Selector período Diners -->
+        <div class="panel mb14">
+          <div class="panel-head"><div class="panel-title">📋 Historial por período</div></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="field" style="margin:0;flex:1;min-width:200px">
+              <select id="dc-periodo-sel" onchange="renderDinersPeriodo()" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:13px;width:100%;outline:none"></select>
+            </div>
+            <button onclick="dcPeriodoActual()" class="btn btn-ghost btn-sm">Período actual</button>
+          </div>
+          <div id="dc-hist-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px"></div>
+        </div>
         <div class="panel">
-          <div class="panel-head"><div class="panel-title">Consumos del período</div></div>
+          <div class="panel-head"><div class="panel-title" id="dc-tx-title">Consumos del período actual</div></div>
           <div class="tx-list" id="dc-tx-list"></div>
         </div>
       </div>
@@ -1600,33 +1648,50 @@ function esEfectivo(t){
   return false;
 }
 function getPeriodoEfectivo(){
-  // Período efectivo: del 1 al último día del mes actual
   const now=new Date();
   const inicio=new Date(now.getFullYear(),now.getMonth(),1);
-  const fin=new Date(now.getFullYear(),now.getMonth()+1,0); // último día del mes
+  const fin=new Date(now.getFullYear(),now.getMonth()+1,0);
   return {inicio,fin};
 }
+function efMesHoy(){
+  const sel=document.getElementById('ef-mes-sel');
+  if(sel)sel.value=thisYM();
+  renderEfectivo();
+}
+function populateEfMeses(){
+  const sel=document.getElementById('ef-mes-sel');
+  if(!sel)return;
+  const meses=[...new Set(txs.filter(t=>esEfectivo(t)).map(t=>ymOf(t.fecha)))].filter(Boolean).sort().reverse();
+  const cur=thisYM();
+  if(!meses.includes(cur))meses.unshift(cur);
+  sel.innerHTML=meses.map(ym=>`<option value="${ym}" ${ym===cur?'selected':''}>${mlabel(ym)}</option>`).join('');
+}
 function renderEfectivo(){
-  const {inicio,fin}=getPeriodoEfectivo();
+  populateEfMeses();
+  const sel=document.getElementById('ef-mes-sel');
+  const selYM=sel?sel.value:thisYM();
+  const [y,m]=selYM.split('-').map(Number);
+  const inicio=new Date(y,m-1,1);
+  const fin=new Date(y,m,0);
   const now=new Date();
+  const esMesActual=selYM===thisYM();
   // Filtrar txs del período 1-fin de mes
   const mt=txs.filter(t=>esEfectivo(t)&&new Date(t.fecha)>=inicio&&new Date(t.fecha)<=fin);
   const total=mt.reduce((s,t)=>s+t.amount,0);
   const diasT=fin.getDate();
-  const diasP=now.getDate();
+  const diasP=esMesActual?now.getDate():diasT;
   const pct=Math.round(diasP/diasT*100);
-  // Banner período
   document.getElementById('ef-periodo-sub').textContent=
-    `Período: 1 al ${fin.getDate()} de ${MONTHS[now.getMonth()]} · ${diasP} días transcurridos`;
+    `Período: 1 al ${fin.getDate()} de ${MONTHS[m-1]} ${y}`;
   document.getElementById('ef-periodo-banner').innerHTML=`
     <div class="pay-box" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:2px">PERÍODO ACTUAL</div>
-        <div style="font-size:13px;font-weight:600">1 ${MONTHS[now.getMonth()]} → ${fin.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:2px">${esMesActual?'PERÍODO ACTUAL':'PERÍODO ANTERIOR'}</div>
+        <div style="font-size:13px;font-weight:600">1 ${MONTHS[m-1]} → ${fin.getDate()} ${MONTHS[m-1]} ${y}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:2px">AVANCE DEL MES</div>
-        <div style="font-size:13px;font-weight:700;color:var(--accent)">${pct}% transcurrido</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:2px">${esMesActual?'AVANCE DEL MES':'PERÍODO CERRADO'}</div>
+        <div style="font-size:13px;font-weight:700;color:${esMesActual?'var(--accent)':'var(--green)'}">${esMesActual?pct+'% transcurrido':'Completo'}</div>
       </div>
     </div>`;
   // Detectar duplicados
@@ -1635,8 +1700,8 @@ function renderEfectivo(){
   document.getElementById('ef-cards').innerHTML=`
     <div class="kcard"><div class="kcard-label">Total efectivo</div><div class="kcard-val" style="color:var(--green)">${fmt(total)}</div><div class="kcard-foot">${mt.length} registros este período</div></div>
     <div class="kcard"><div class="kcard-label">Mayor gasto</div><div class="kcard-val" style="color:var(--red);font-size:16px">${Object.entries(bycat).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—'}</div><div class="kcard-foot">${fmt(Object.entries(bycat).sort((a,b)=>b[1]-a[1])[0]?.[1]||0)}</div></div>
-    <div class="kcard"><div class="kcard-label">Promedio diario</div><div class="kcard-val" style="color:var(--text)">${fmt(total/diasP)}</div><div class="kcard-foot">Este período</div></div>
-    <div class="kcard"><div class="kcard-label">Proyección mes</div><div class="kcard-val" style="color:var(--amber);font-size:16px">${fmt(total/diasP*diasT)}</div><div class="kcard-foot">Al ritmo actual</div></div>
+    <div class="kcard"><div class="kcard-label">Promedio diario</div><div class="kcard-val" style="color:var(--text)">${fmt(diasP>0?total/diasP:0)}</div><div class="kcard-foot">${esMesActual?'Este período':'Promedio del mes'}</div></div>
+    ${esMesActual?`<div class="kcard"><div class="kcard-label">Proyección mes</div><div class="kcard-val" style="color:var(--amber);font-size:16px">${fmt(diasP>0?total/diasP*diasT:0)}</div><div class="kcard-foot">Al ritmo actual</div></div>`:''}
   `;
   const sorted=Object.entries(bycat).sort((a,b)=>b[1]-a[1]);const max=sorted[0]?.[1]||1;
   document.getElementById('ef-catbars').innerHTML=sorted.length
@@ -1652,6 +1717,50 @@ function renderEfectivo(){
 // ══════════════════════════════════════════════════════
 // DINERS
 // ══════════════════════════════════════════════════════
+function getDinersPeridos(){
+  // Genera lista de períodos Diners (26 del mes anterior al 25 del mes actual)
+  // para los últimos 12 meses
+  const periodos=[];
+  const now=new Date();
+  for(let i=0;i<13;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const corte=new Date(d.getFullYear(),d.getMonth(),25);
+    const pStart=new Date(d.getFullYear(),d.getMonth()-1,26);
+    const label=`${MONTHS[pStart.getMonth()].slice(0,3)} 26 → ${MONTHS[corte.getMonth()].slice(0,3)} 25 ${corte.getFullYear()}`;
+    periodos.push({label,pStart,corte,key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`});
+  }
+  return periodos;
+}
+function populateDcPeriodos(){
+  const sel=document.getElementById('dc-periodo-sel');
+  if(!sel)return;
+  const periodos=getDinersPeridos();
+  sel.innerHTML=periodos.map((p,i)=>`<option value="${i}">${i===0?'Período actual: ':i===1?'Período anterior: ':''}${p.label}</option>`).join('');
+}
+function dcPeriodoActual(){
+  const sel=document.getElementById('dc-periodo-sel');
+  if(sel)sel.value='0';
+  renderDinersPeriodo();
+}
+function renderDinersPeriodo(){
+  const sel=document.getElementById('dc-periodo-sel');
+  const idx=sel?parseInt(sel.value)||0:0;
+  const periodos=getDinersPeridos();
+  const {pStart,corte,label}=periodos[idx];
+  const pTxs=txs.filter(t=>esDiners(t)&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  const consumo=pTxs.reduce((s,t)=>s+t.amount,0);
+  const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  const total=idx===0?consumo+cuotasT:consumo;
+  document.getElementById('dc-tx-title').textContent=`Consumos: ${label}`;
+  document.getElementById('dc-hist-cards').innerHTML=`
+    <div class="kcard"><div class="kcard-label">Consumo directo</div><div class="kcard-val" style="color:var(--amber);font-size:18px">${fmt(consumo)}</div><div class="kcard-foot">${pTxs.length} transacciones</div></div>
+    ${idx===0?`<div class="kcard"><div class="kcard-label">Cuotas fijas</div><div class="kcard-val" style="color:var(--purple);font-size:18px">${fmt(cuotasT)}</div><div class="kcard-foot">${cuotas.length} cuota(s)</div></div>`:''}
+    <div class="kcard"><div class="kcard-label">Total período</div><div class="kcard-val" style="color:var(--red);font-size:18px">${fmt(total)}</div><div class="kcard-foot">${idx===0?'A pagar antes del 12':'Período cerrado'}</div></div>
+  `;
+  document.getElementById('dc-tx-list').innerHTML=pTxs.length
+    ?pTxs.map(txHTML).join('')
+    :'<div class="empty">Sin consumos en este período</div>';
+}
 function renderDiners(){
   document.getElementById('dc-holder').textContent=config.cardName||'Tu nombre';
   document.getElementById('dc-num').textContent=config.cardDigits||'0000';
@@ -1680,6 +1789,9 @@ function renderDiners(){
     <button class="tx-btn del" onclick="deleteCuota(${i})">✕</button>
   </div>`).join(''):'<div class="empty">Sin cuotas fijas registradas</div>';
   document.getElementById('dc-tx-list').innerHTML=pTxs.length?pTxs.map(txHTML).join(''):'<div class="empty">Sin consumos en el período actual</div>';
+  // Poblar selector de períodos históricos
+  populateDcPeriodos();
+  renderDinersPeriodo();
 }
 async function saveCardConfig(){
   config.cardName=document.getElementById('dc-name-in').value||'Tu nombre';
@@ -2192,6 +2304,39 @@ async function deleteRec(id){
 // ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
+// ── LOGIN ──
+function cerrarSesion(){
+  if(!confirm('¿Cerrar sesión?'))return;
+  localStorage.removeItem('ge_auth');
+  sessionStorage.removeItem('ge_auth');
+  location.reload();
+}
+function doLogin(){
+  const user=document.getElementById('login-user').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  if(user==='egusvia'&&pass==='070326'){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('loader').style.display='flex';
+    localStorage.setItem('ge_auth','1');
+    sessionStorage.setItem('ge_auth','1');
+    loadAll();
+  } else {
+    err.style.display='block';
+    document.getElementById('login-pass').value='';
+    document.getElementById('login-pass').focus();
+    setTimeout(()=>err.style.display='none',3000);
+  }
+}
+// Verificar si ya estaba logueado
+(function(){
+  if(localStorage.getItem('ge_auth')==='1'||sessionStorage.getItem('ge_auth')==='1'){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('loader').style.display='flex';
+    // loadAll se llama desde el init al final
+  }
+})();
+
 document.getElementById('g-fecha').value=today();
 document.getElementById('ing-fecha').value=today();
 
@@ -2205,7 +2350,10 @@ if('serviceWorker' in navigator){
 }
 document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target.id==='modal-overlay')closeModal();});
 document.getElementById('g-pago-tipo').addEventListener('change',onPagoTipoChange);
-loadAll();
+// Llamar loadAll si ya está autenticado
+if(localStorage.getItem('ge_auth')==='1'||sessionStorage.getItem('ge_auth')==='1'){
+  loadAll();
+}
 </script>
 </body>
 </html>
