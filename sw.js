@@ -1,4 +1,4 @@
-const CACHE = 'ge-finance-v1';
+const CACHE = 'ge-finance-v3';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
@@ -16,13 +16,13 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Solo cachear requests del mismo origen (no Google Scripts)
   if (!e.request.url.startsWith(self.location.origin)) return;
+  // Network First: siempre intenta la red primero para tener la versión más reciente
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
+    fetch(e.request).then(resp => {
       const clone = resp.clone();
       caches.open(CACHE).then(c => c.put(e.request, clone));
       return resp;
-    }))
+    }).catch(() => caches.match(e.request))
   );
 });
