@@ -548,26 +548,23 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="page" id="page-registrar">
         <div class="page-header">
           <div class="page-title">Registrar gasto</div>
-          <div class="page-sub">Efectivo · Diners Club · Pluxee · Transporte · Hogar</div>
+          <div class="page-sub">Ingresa los datos del gasto y el tipo de pago</div>
         </div>
         <div class="panel mb14">
-          <div class="type-pills">
-            <button class="tpill t-efectivo" id="tp-efectivo" onclick="setGasto('efectivo')">💵 Efectivo</button>
-            <button class="tpill" id="tp-diners" onclick="setGasto('diners')">💳 Diners Club</button>
-            <button class="tpill" id="tp-transporte" onclick="setGasto('transporte')">🚌 Transporte trabajo</button>
-            <button class="tpill" id="tp-taxi" onclick="setGasto('taxi')">🚕 Taxi</button>
-            <button class="tpill" id="tp-hogar" onclick="setGasto('hogar')">🏠 Hogar</button>
-            <button class="tpill" id="tp-pluxee" onclick="setGasto('pluxee')">🍽 Pluxee</button>
-            <button class="tpill" id="tp-hormiga" onclick="setGasto('hormiga')">🐜 Hormiga</button>
-          </div>
+          <div class="panel-head"><div class="panel-title">Nuevo registro</div></div>
 
-          <!-- Campos base -->
+          <!-- Campos base siempre visibles -->
           <div class="fg">
-            <div class="field"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej. Almuerzo, Uber, Amazon"></div>
-            <div class="field"><label>Monto (S/)</label><input type="number" id="g-monto" placeholder="0.00" step="0.01" min="0"></div>
+            <div class="field"><label>📝 Descripción</label><input type="text" id="g-desc" placeholder="Ej. Almuerzo, Uber, Amazon"></div>
+            <div class="field"><label>💰 Monto (S/)</label>
+              <div style="position:relative">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--text3);pointer-events:none">S/</span>
+                <input type="number" id="g-monto" placeholder="0.00" step="0.01" min="0" style="padding-left:30px;font-family:var(--mono);font-weight:700">
+              </div>
+            </div>
           </div>
           <div class="fg">
-            <div class="field" id="g-cat-wrap"><label>Categoría</label>
+            <div class="field" id="g-cat-wrap"><label>🏷 Categoría</label>
               <select id="g-cat" onchange="onCatChange()">
                 <option value="Almuerzo">🍱 Almuerzo</option>
                 <option value="Mercado">🛒 Mercado</option>
@@ -583,27 +580,43 @@ input,select,textarea,button{font-family:var(--font)}
                 <option value="Otros">📦 Otros</option>
               </select>
             </div>
-            <div class="field"><label>Fecha</label><input type="date" id="g-fecha"></div>
+            <div class="field"><label>📅 Fecha</label><input type="date" id="g-fecha"></div>
           </div>
 
-          <!-- Otros motivo -->
+          <!-- SELECT PRINCIPAL: Tipo de gasto -->
+          <div class="fg g1">
+            <div class="field"><label>💳 Tipo de gasto / Medio de pago</label>
+              <select id="g-tipo-pago" onchange="onTipoPagoChange(this.value)">
+                <option value="">— Selecciona el tipo de gasto —</option>
+                <option value="efectivo">💵 Efectivo</option>
+                <option value="diners">💳 Diners Club</option>
+                <option value="transporte">🚌 Transporte trabajo</option>
+                <option value="taxi">🚕 Taxi</option>
+                <option value="hogar">🏠 Hogar</option>
+                <option value="pluxee">🍽 Pluxee Perú</option>
+                <option value="hormiga">🐜 Gasto Hormiga</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Motivo Otros -->
           <div class="fg g1" id="g-otros-wrap" style="display:none">
             <div class="field"><label>Especifica el motivo (Otros)</label><input type="text" id="g-otros-motivo" placeholder="Describe el gasto"></div>
           </div>
 
-          <!-- Diners extra -->
-          <div id="g-diners-extra" style="display:none">
-            <div class="divider"></div>
-            <div class="section-lbl">Configuración Diners</div>
+          <!-- ── DINERS extra ── -->
+          <div id="g-diners-extra" style="display:none;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s ease;max-height:0;opacity:0">
+            <div class="divider" style="margin:12px 0 14px"></div>
+            <div class="section-lbl" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:10px;border-radius:99px;background:var(--amber)"></span>Diners Club</div>
             <div class="fg">
-              <div class="field"><label>Tipo de pago</label>
+              <div class="field"><label>💳 Tipo de pago</label>
                 <select id="g-pago-tipo" onchange="onPagoTipoChange()">
                   <option value="directo">Pago directo</option>
                   <option value="cuotas-sin-int">Cuotas sin interés</option>
                   <option value="cuotas-con-int">Cuotas con interés</option>
                 </select>
               </div>
-              <div class="field" id="g-ncuotas-wrap" style="display:none"><label>Número de cuotas</label>
+              <div class="field" id="g-ncuotas-wrap" style="display:none"><label>🔢 Número de cuotas</label>
                 <select id="g-ncuotas">
                   <option value="2">2 cuotas</option><option value="3">3 cuotas</option>
                   <option value="6">6 cuotas</option><option value="9">9 cuotas</option>
@@ -614,12 +627,12 @@ input,select,textarea,button{font-family:var(--font)}
             </div>
           </div>
 
-          <!-- Transporte extra -->
-          <div id="g-transp-extra" style="display:none">
-            <div class="divider"></div>
-            <div class="section-lbl">Tipo de transporte</div>
+          <!-- ── TRANSPORTE extra ── -->
+          <div id="g-transp-extra" style="display:none;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s ease;max-height:0;opacity:0">
+            <div class="divider" style="margin:12px 0 14px"></div>
+            <div class="section-lbl" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:10px;border-radius:99px;background:var(--teal)"></span>Transporte trabajo</div>
             <div class="fg g1">
-              <div class="field"><label>Medio de transporte</label>
+              <div class="field"><label>🚌 Medio de transporte</label>
                 <select id="g-transp-tipo">
                   <option value="Bus">Bus público</option>
                   <option value="Metropolitano">Metropolitano</option>
@@ -630,12 +643,12 @@ input,select,textarea,button{font-family:var(--font)}
             </div>
           </div>
 
-          <!-- Taxi extra -->
-          <div id="g-taxi-extra" style="display:none">
-            <div class="divider"></div>
-            <div class="section-lbl">Detalles del taxi</div>
+          <!-- ── TAXI extra ── -->
+          <div id="g-taxi-extra" style="display:none;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s ease;max-height:0;opacity:0">
+            <div class="divider" style="margin:12px 0 14px"></div>
+            <div class="section-lbl" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:10px;border-radius:99px;background:var(--accent)"></span>Taxi</div>
             <div class="fg">
-              <div class="field"><label>Motivo del taxi</label>
+              <div class="field"><label>📍 Motivo del viaje</label>
                 <select id="g-taxi-motivo">
                   <option value="Al trabajo">Al trabajo</option>
                   <option value="Salida">Salida</option>
@@ -645,28 +658,28 @@ input,select,textarea,button{font-family:var(--font)}
                   <option value="Otro">Otro</option>
                 </select>
               </div>
-              <div class="field"><label>Pagado con</label>
+              <div class="field"><label>💳 Pagado con</label>
                 <select id="g-taxi-pago">
-                  <option value="Efectivo">Efectivo</option>
-                  <option value="Diners">Diners Club</option>
+                  <option value="Efectivo">💵 Efectivo</option>
+                  <option value="Diners">💳 Diners Club</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <!-- Hogar extra -->
-          <div id="g-hogar-extra" style="display:none">
-            <div class="divider"></div>
-            <div class="section-lbl">Detalles del departamento</div>
+          <!-- ── HOGAR extra ── -->
+          <div id="g-hogar-extra" style="display:none;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s ease;max-height:0;opacity:0">
+            <div class="divider" style="margin:12px 0 14px"></div>
+            <div class="section-lbl" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:10px;border-radius:99px;background:#f97316"></span>Hogar</div>
             <div class="fg">
-              <div class="field"><label>Departamento</label>
+              <div class="field"><label>🏢 Departamento</label>
                 <select id="g-hogar-depto">
                   <option value="Lince">🏢 Lince</option>
                   <option value="Villa Sol">🏢 Villa Sol</option>
                   <option value="Huandoy">🏢 Huandoy</option>
                 </select>
               </div>
-              <div class="field"><label>Tipo de gasto</label>
+              <div class="field"><label>🏷 Tipo de gasto</label>
                 <select id="g-hogar-cat">
                   <option value="Alquiler">🏷 Alquiler</option>
                   <option value="Servicios básicos">💡 Servicios básicos</option>
@@ -677,8 +690,8 @@ input,select,textarea,button{font-family:var(--font)}
                 </select>
               </div>
             </div>
-            <div class="fg">
-              <div class="field"><label>Medio de pago</label>
+            <div class="fg g1">
+              <div class="field"><label>💳 Medio de pago</label>
                 <select id="g-hogar-medio">
                   <option value="efectivo">💵 Efectivo</option>
                   <option value="diners">💳 Diners Club</option>
@@ -687,18 +700,32 @@ input,select,textarea,button{font-family:var(--font)}
             </div>
           </div>
 
+          <!-- ── PLUXEE extra ── -->
+          <div id="g-pluxee-extra" style="display:none;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s ease;max-height:0;opacity:0">
+            <div class="divider" style="margin:12px 0 14px"></div>
+            <div class="section-lbl" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:10px;border-radius:99px;background:#22c55e"></span>Pluxee Perú</div>
+            <div class="fg g1">
+              <div class="field"><label>🍽 Tipo de uso</label>
+                <select id="g-pluxee-tipo">
+                  <option value="Almuerzo">🍱 Almuerzo</option>
+                  <option value="Mercado">🛒 Mercado</option>
+                  <option value="Restaurante">🍽 Restaurante</option>
+                </select>
+              </div>
+            </div>
+          </div>
 
-          <!-- Hormiga extra -->
-          <div id="g-hormiga-extra" style="display:none">
-            <div class="divider"></div>
-            <div class="section-lbl">Gasto hormiga</div>
+          <!-- ── HORMIGA extra ── -->
+          <div id="g-hormiga-extra" style="display:none;overflow:hidden;transition:max-height 0.35s ease,opacity 0.3s ease;max-height:0;opacity:0">
+            <div class="divider" style="margin:12px 0 14px"></div>
+            <div class="section-lbl" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:3px;height:10px;border-radius:99px;background:#84cc16"></span>Gasto Hormiga</div>
             <div class="fg">
-              <div class="field"><label>Seleccionar guardado</label>
+              <div class="field"><label>🐜 Guardado</label>
                 <select id="g-hormiga-rec" onchange="onHormigaRecChange()">
                   <option value="">— Nuevo gasto hormiga —</option>
                 </select>
               </div>
-              <div class="field"><label>Medio de pago</label>
+              <div class="field"><label>💳 Medio de pago</label>
                 <select id="g-hormiga-medio">
                   <option value="efectivo">💵 Efectivo</option>
                   <option value="diners">💳 Diners Club</option>
@@ -706,7 +733,7 @@ input,select,textarea,button{font-family:var(--font)}
               </div>
             </div>
             <div class="fg g1">
-              <div class="field"><label>Categoría</label>
+              <div class="field"><label>🏷 Categoría</label>
                 <select id="g-hormiga-cat">
                   <option value="Entretenimiento">🎬 Entretenimiento</option>
                   <option value="Tecnología">💻 Tecnología</option>
@@ -719,24 +746,27 @@ input,select,textarea,button{font-family:var(--font)}
             </div>
           </div>
 
-          <!-- Recurrente checkbox -->
-          <div style="margin-top:10px;padding:10px 12px;background:var(--s2);border-radius:var(--r);border:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text2)">
-              <input type="checkbox" id="g-es-recurrente" style="accent-color:var(--accent);width:15px;height:15px" onchange="onRecurrenteChange()">
-              <span>🔄 <strong>Guardar como recurrente</strong> — se pre-llenará automáticamente el próximo mes</span>
-            </label>
+          <!-- Recurrente toggle -->
+          <div style="margin-top:14px;padding:11px 14px;background:var(--s2);border-radius:var(--r2);border:1px solid var(--border2);display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.2s,background 0.2s" onclick="onRecurrenteChange()" id="rec-toggle-row">
+            <div id="rec-toggle-sw" style="width:38px;height:22px;border-radius:99px;background:var(--s4);border:1px solid var(--border2);position:relative;flex-shrink:0;transition:background 0.25s,border-color 0.25s">
+              <div id="rec-toggle-knob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text3);transition:left 0.25s,background 0.25s"></div>
+            </div>
+            <span style="font-size:13px;color:var(--text2)">🔄 <strong style="color:var(--text)">Guardar como recurrente</strong> — se pre-llenará automáticamente el próximo mes</span>
           </div>
+          <input type="hidden" id="g-es-recurrente" value="false">
           <div id="g-rec-dia-wrap" style="display:none;margin-top:8px">
             <div class="fg">
-              <div class="field"><label>Día del mes que se cobra</label>
-                <input type="number" id="g-rec-dia" min="1" max="31" placeholder="Ej. 5" value="1" style="max-width:120px">
+              <div class="field"><label>📆 Día del mes que se cobra</label>
+                <input type="number" id="g-rec-dia" min="1" max="31" placeholder="Ej. 5" value="1">
               </div>
             </div>
           </div>
 
           <!-- Notas -->
-          <div class="fg g1" style="margin-top:4px">
-            <div class="field"><label>Notas adicionales (opcional)</label><input type="text" id="g-notas" placeholder="Cualquier detalle extra"></div>
+          <div class="fg g1" style="margin-top:12px">
+            <div class="field"><label>📋 Notas adicionales (opcional)</label>
+              <textarea id="g-notas" placeholder="Cualquier detalle extra..." style="resize:none;min-height:52px"></textarea>
+            </div>
           </div>
 
           <div class="btn-row">
@@ -915,19 +945,15 @@ input,select,textarea,button{font-family:var(--font)}
           </div>
         </div>
 
-        <!-- Config saldo inicial -->
-        <div class="panel mb14">
-          <div class="panel-head"><div class="panel-title">⚙️ Saldo inicial</div></div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-            Ingresa el saldo que tenías antes de tu primer registro en la app. Este monto se sumará al cálculo acumulado.
-          </div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="field" style="margin:0;flex:1">
-              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;display:block;margin-bottom:4px">Saldo inicial (S/)</label>
-              <input type="number" id="px-saldo-inicial" step="0.01" placeholder="Ej. 8.49"
-                style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:9px 11px;color:var(--text);font-size:13px;width:100%;outline:none">
+        <!-- Info panel Pluxee -->
+        <div class="panel mb14" style="background:var(--green2);border-color:var(--green3)">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="font-size:20px;flex-shrink:0">🍽</div>
+            <div style="font-size:13px;color:var(--text2);line-height:1.7">
+              <strong style="color:var(--green)">Tarjeta de alimentación del trabajo.</strong><br>
+              Se recarga <strong style="color:var(--text)">S/ 163.00</strong> automáticamente cada día <strong style="color:var(--text)">25 del mes</strong>.
+              El saldo sobrante se acumula al siguiente período. Los gastos Pluxee no afectan efectivo ni Diners.
             </div>
-            <button class="btn btn-blue btn-sm" style="margin-top:18px" onclick="savePluxeeSaldoInicial()">Guardar</button>
           </div>
         </div>
         <!-- KPIs -->
@@ -1554,6 +1580,7 @@ async function addIngreso(){
   const tipo=document.getElementById('ing-tipo').value;
   const fecha=document.getElementById('ing-fecha').value||today();
   const motivo=document.getElementById('ing-motivo').value.trim();
+  if(!gastoTipo||gastoTipo===''){toast('Selecciona el tipo de gasto','warn');return;}
   if(!monto||monto<=0){toast('Ingresa un monto válido','warn');return;}
   const btn=document.getElementById('btn-ing');btn.disabled=true;btn.textContent='Guardando...';
   const tx={id:String(Date.now()),fecha,descripcion:desc||tipo,monto:String(monto),tipo:'ingreso',categoria:'Ingreso',ingresoTipo:tipo,motivo};
@@ -1565,22 +1592,39 @@ function clearIngreso(){['ing-desc','ing-monto','ing-motivo'].forEach(id=>docume
 // ══════════════════════════════════════════════════════
 // REGISTRAR GASTO
 // ══════════════════════════════════════════════════════
-function setGasto(t){
+function setGasto(t){gastoTipo=t;}
+function onTipoPagoChange(t){
   gastoTipo=t;
-  ['efectivo','diners','transporte','taxi','hogar','hormiga','pluxee'].forEach(x=>{
-    const p=document.getElementById('tp-'+x);if(p){p.className='tpill';if(x===t)p.className='tpill t-'+t;}
+  const allExtras=['g-diners-extra','g-transp-extra','g-taxi-extra','g-hogar-extra','g-pluxee-extra','g-hormiga-extra'];
+  allExtras.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    const show=(
+      (id==='g-diners-extra'&&t==='diners')||
+      (id==='g-transp-extra'&&t==='transporte')||
+      (id==='g-taxi-extra'&&t==='taxi')||
+      (id==='g-hogar-extra'&&t==='hogar')||
+      (id==='g-pluxee-extra'&&t==='pluxee')||
+      (id==='g-hormiga-extra'&&t==='hormiga')
+    );
+    if(show){
+      el.style.display='';
+      requestAnimationFrame(()=>{el.style.maxHeight='600px';el.style.opacity='1';});
+    } else {
+      el.style.maxHeight='0';el.style.opacity='0';
+      setTimeout(()=>{el.style.display='none';},350);
+    }
   });
-  document.getElementById('g-cat-wrap').style.display=(t==='transporte'||t==='taxi'||t==='hogar'||t==='hormiga'||t==='pluxee')?'none':'';
-  document.getElementById('g-diners-extra').style.display=t==='diners'?'':'none';
-  document.getElementById('g-transp-extra').style.display=t==='transporte'?'':'none';
-  document.getElementById('g-taxi-extra').style.display=t==='taxi'?'':'none';
-  document.getElementById('g-hogar-extra').style.display=t==='hogar'?'':'none';
-  document.getElementById('g-hormiga-extra').style.display=t==='hormiga'?'':'none';
+  document.getElementById('g-cat-wrap').style.display=
+    (t==='transporte'||t==='taxi'||t==='hogar'||t==='hormiga'||t==='pluxee')?'none':'';
   document.getElementById('g-otros-wrap').style.display='none';
-  // Resetear checkbox recurrente al cambiar tipo
-  document.getElementById('g-es-recurrente').checked=false;
+  const sw=document.getElementById('rec-toggle-sw');
+  const knob=document.getElementById('rec-toggle-knob');
+  document.getElementById('g-es-recurrente').value='false';
   document.getElementById('g-rec-dia-wrap').style.display='none';
-  if(t==='diners')onPagoTipoChange();
+  if(sw){sw.style.background='var(--s4)';sw.style.borderColor='var(--border2)';}
+  if(knob){knob.style.left='2px';knob.style.background='var(--text3)';}
+  if(t==='diners')onPagoTipoChange2();
   if(t==='hormiga')populateHormigaRec();
 }
 function onCatChange(){
@@ -1611,19 +1655,33 @@ function onHormigaRecChange(){
   document.getElementById('g-hormiga-cat').value=r.categoria||'Otros';
 }
 function onRecurrenteChange(){
-  const checked=document.getElementById('g-es-recurrente').checked;
-  document.getElementById('g-rec-dia-wrap').style.display=checked?'':'none';
+  const hidden=document.getElementById('g-es-recurrente');
+  const isOn=hidden.value==='true';
+  const nowOn=!isOn;
+  hidden.value=String(nowOn);
+  const sw=document.getElementById('rec-toggle-sw');
+  const knob=document.getElementById('rec-toggle-knob');
+  if(sw){sw.style.background=nowOn?'var(--accent)':'var(--s4)';sw.style.borderColor=nowOn?'var(--accent2)':'var(--border2)';}
+  if(knob){knob.style.left=nowOn?'18px':'2px';knob.style.background=nowOn?'#fff':'var(--text3)';}
+  document.getElementById('g-rec-dia-wrap').style.display=nowOn?'':'none';
 }
-function onPagoTipoChange(){
+function onPagoTipoChange2(){
   const v=document.getElementById('g-pago-tipo').value;
   document.getElementById('g-ncuotas-wrap').style.display=v==='directo'?'none':'';
 }
+function onPagoTipoChange(){onPagoTipoChange2();}
 function clearGasto(){
-  ['g-desc','g-monto','g-otros-motivo','g-notas'].forEach(id=>document.getElementById(id).value='');
+  ['g-desc','g-monto','g-otros-motivo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const notas=document.getElementById('g-notas');if(notas)notas.value='';
   document.getElementById('g-fecha').value=today();
-  document.getElementById('g-hogar-extra').style.display='none';
-  document.getElementById('g-hormiga-extra').style.display='none';
-  document.getElementById('g-es-recurrente').checked=false;
+  document.getElementById('g-tipo-pago').value='';
+  ['g-diners-extra','g-transp-extra','g-taxi-extra','g-hogar-extra','g-pluxee-extra','g-hormiga-extra'].forEach(id=>{
+    const el=document.getElementById(id);if(el){el.style.maxHeight='0';el.style.opacity='0';el.style.display='none';}
+  });
+  document.getElementById('g-cat-wrap').style.display='';
+  document.getElementById('g-otros-wrap').style.display='none';
+  const hidden=document.getElementById('g-es-recurrente');
+  if(hidden&&hidden.value==='true')onRecurrenteChange();
   document.getElementById('g-rec-dia-wrap').style.display='none';
 }
 async function addGasto(){
@@ -1678,7 +1736,7 @@ async function addGasto(){
       await api('add',{tx});
       txs.unshift({...tx,amount:monto});
       // Si marcó guardar como recurrente → guardarlo en la lista
-      const esRec=document.getElementById('g-es-recurrente').checked;
+      const esRec=document.getElementById('g-es-recurrente').value==='true';
       if(esRec && desc){
         const diaCobro=document.getElementById('g-rec-dia').value||'1';
         const rec={nombre:desc,monto:String(monto),medioPago:medio,diaCobro,categoria:cat,activo:'true'};
@@ -1700,7 +1758,7 @@ async function addGasto(){
     await api('add',{tx});
     txs.unshift({...tx,amount:monto});
     // Si marcó guardar como recurrente → guardarlo en la lista
-    const esRec=document.getElementById('g-es-recurrente').checked;
+    const esRec=document.getElementById('g-es-recurrente').value==='true';
     if(esRec && desc){
       const diaCobro=document.getElementById('g-rec-dia').value||'1';
       const medioPago=(gastoTipo==='diners')?'diners':'efectivo';
@@ -2270,28 +2328,26 @@ function getPluxeePeriodos(){
 }
 
 function calcPluxeeSaldo(){
-  // Lógica correcta:
-  // 1) Saldo inicial configurable (sobrante de antes del primer registro)
-  // 2) Solo sumar recargas de períodos que tienen al menos 1 gasto O son el período actual
-  // 3) Saldo = saldoInicial + recargas de períodos con actividad - total gastado
-  const saldoInicial = parseFloat(config.pluxeeSaldoInicial||'0');
+  // Lógica:
+  // Saldo arranque = S/ 171.49 al 25-Mar-2026 (sobrante 8.49 + recarga 163 de ese día)
+  // Desde ese punto: cada vez que pasa el día 25 se suma PLUXEE_RECARGA
+  // Los gastos con tipo='pluxee' se restan
+  const SALDO_ARRANQUE = 171.49;
+  const FECHA_ARRANQUE = new Date('2026-03-25');
+  const now = new Date();
   const allPxTxs = txs.filter(t=>t.tipo==='pluxee');
   const totalGastado = allPxTxs.reduce((s,t)=>s+t.amount,0);
-  if(!allPxTxs.length) return saldoInicial + PLUXEE_RECARGA;
-  // Encontrar fecha del primer gasto
-  const fechas = allPxTxs.map(t=>new Date(t.fecha)).sort((a,b)=>a-b);
-  const primerGasto = fechas[0];
-  // Calcular cuántos períodos van desde el primer gasto hasta ahora
-  const periodos = getPluxeePeriodos();
-  // Contar períodos que incluyen el primer gasto o posteriores
-  let recargasAcumuladas = 0;
-  for(const p of periodos){
-    // Si el período es posterior o igual al del primer gasto, sumar recarga
-    if(p.corte >= primerGasto){
-      recargasAcumuladas += PLUXEE_RECARGA;
-    }
+  // Contar cuántas recargas han ocurrido DESPUÉS del arranque
+  // La del arranque ya está incluida en SALDO_ARRANQUE
+  let recargasExtra = 0;
+  let d = new Date(FECHA_ARRANQUE);
+  // Avanzar al siguiente día 25
+  d.setMonth(d.getMonth()+1);
+  while(d <= now){
+    recargasExtra += PLUXEE_RECARGA;
+    d.setMonth(d.getMonth()+1);
   }
-  return Math.max(0, saldoInicial + recargasAcumuladas - totalGastado);
+  return Math.max(0, SALDO_ARRANQUE + recargasExtra - totalGastado);
 }
 
 function populatePxPeriodos(){
@@ -2331,19 +2387,8 @@ function renderPluxeePeriodo(){
     :'<div class="empty">Sin consumos en este período</div>';
 }
 
-function savePluxeeSaldoInicial(){
-  const val=document.getElementById('px-saldo-inicial').value;
-  if(val===''){toast('Ingresa un monto','warn');return;}
-  config.pluxeeSaldoInicial=String(parseFloat(val)||0);
-  api('saveConfig',{config}).then(()=>{
-    toast('✅ Saldo inicial guardado');
-    renderPluxee();
-  });
-}
+// savePluxeeSaldoInicial removed
 function renderPluxee(){
-  // Cargar saldo inicial configurado
-  const siInput=document.getElementById('px-saldo-inicial');
-  if(siInput) siInput.value=config.pluxeeSaldoInicial||'';
   // Próxima recarga
   const now=new Date();
   let proxRecarga=new Date(now.getFullYear(),now.getMonth(),PLUXEE_DIA_RECARGA);
