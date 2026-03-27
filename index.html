@@ -341,14 +341,93 @@ input,select,textarea,button{font-family:var(--font)}
 
 /* ── MOBILE ── */
 @media(max-width:640px){
+  /* Layout base */
   .layout{flex-direction:column}
-  .sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--border)}
-  .sb-balance,.sb-header .sb-sub{display:none}
-  .nav{display:flex;flex-wrap:wrap;gap:3px;padding:6px}
-  .nav-group{display:none}
-  .nav-item{padding:5px 8px;font-size:11px;margin-bottom:0;width:auto}
-  .nav-icon{display:none}
-  .main{padding:12px}
+  .main{padding:12px;padding-bottom:80px} /* espacio para bottom nav */
+
+  /* Ocultar sidebar desktop completamente */
+  .sidebar{display:none}
+
+  /* ── TOPBAR MÓVIL ── */
+  .topbar{padding:10px 14px}
+
+  /* ── BOTTOM NAV ── */
+  .mob-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:500;
+    background:var(--s1);border-top:1px solid var(--border2);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+    justify-content:space-around;align-items:flex-end;
+  }
+  .mob-nav-btn{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;cursor:pointer;
+    color:var(--text3);padding:4px 10px;border-radius:var(--r2);
+    transition:all 0.18s;font-family:var(--font);flex:1;max-width:70px;
+  }
+  .mob-nav-btn.active{color:var(--accent)}
+  .mob-nav-btn .mni{font-size:20px;line-height:1}
+  .mob-nav-btn .mnl{font-size:10px;font-weight:600;white-space:nowrap}
+
+  /* ── DRAWER MENÚ COMPLETO ── */
+  .mob-drawer{
+    position:fixed;inset:0;z-index:800;
+    display:flex;flex-direction:column;
+    background:var(--bg);
+    transform:translateX(100%);transition:transform 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+  .mob-drawer.open{transform:translateX(0)}
+  .mob-drawer-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 18px;border-bottom:1px solid var(--border);
+    padding-top:calc(16px + env(safe-area-inset-top));
+  }
+  .mob-drawer-logo{font-size:17px;font-weight:700;letter-spacing:-0.3px}
+  .mob-drawer-logo span{color:var(--accent)}
+  .mob-drawer-close{background:var(--s2);border:1px solid var(--border2);border-radius:8px;
+    color:var(--text2);font-size:18px;width:34px;height:34px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;}
+  .mob-drawer-saldo{
+    margin:12px 16px;padding:14px 16px;
+    background:var(--s2);border-radius:var(--r2);border:1px solid var(--border2);
+  }
+  .mob-drawer-saldo-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+  .mob-drawer-saldo-val{font-size:22px;font-weight:700;font-family:var(--mono)}
+  .mob-drawer-body{flex:1;overflow-y:auto;padding:8px 10px 100px}
+  .mob-drawer-group{font-size:9px;text-transform:uppercase;letter-spacing:1.8px;
+    color:var(--text3);padding:12px 8px 4px;font-weight:700}
+  .mob-drawer-item{
+    display:flex;align-items:center;gap:12px;padding:11px 12px;
+    border-radius:var(--r);cursor:pointer;color:var(--text2);
+    font-size:14px;font-weight:500;width:100%;background:none;border:none;
+    text-align:left;font-family:var(--font);transition:all 0.15s;margin-bottom:2px;
+  }
+  .mob-drawer-item:hover,.mob-drawer-item:active{background:var(--s2);color:var(--text)}
+  .mob-drawer-item.active{background:var(--accent-glow);color:var(--accent)}
+  .mob-drawer-item .di-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0}
+  .mob-drawer-overlay{
+    position:fixed;inset:0;z-index:799;background:rgba(0,0,0,0.6);
+    opacity:0;pointer-events:none;transition:opacity 0.28s;backdrop-filter:blur(2px);
+  }
+  .mob-drawer-overlay.open{opacity:1;pointer-events:auto}
+
+  /* Cards más compactas */
+  .cards{grid-template-columns:1fr 1fr}
+  .kcard{padding:12px}
+  .kcard-val{font-size:17px}
+
+  /* Panels en columna */
+  .panels,.panels.wide,.panels.w3{grid-template-columns:1fr}
+
+  /* Formularios en columna */
+  .fg,.fg.g3{grid-template-columns:1fr}
+
+  /* Pills wrap ok */
+  .type-pills{gap:4px}
+}
+
+/* Ocultar bottom nav en desktop */
+@media(min-width:641px){
+  .mob-nav,.mob-drawer,.mob-drawer-overlay{display:none!important}
 }
 </style>
 </head>
@@ -1226,6 +1305,59 @@ input,select,textarea,button{font-family:var(--font)}
   </div>
 </div>
 
+<!-- ── BOTTOM NAV MÓVIL ── -->
+<nav class="mob-nav" id="mob-nav">
+  <button class="mob-nav-btn active" id="mbn-dashboard" onclick="mobGo('dashboard')">
+    <span class="mni">📊</span><span class="mnl">Inicio</span>
+  </button>
+  <button class="mob-nav-btn" id="mbn-registrar" onclick="mobGo('registrar')">
+    <span class="mni">➕</span><span class="mnl">Registrar</span>
+  </button>
+  <button class="mob-nav-btn" id="mbn-efectivo" onclick="mobGo('efectivo')">
+    <span class="mni">💵</span><span class="mnl">Efectivo</span>
+  </button>
+  <button class="mob-nav-btn" id="mbn-diners" onclick="mobGo('diners')">
+    <span class="mni">💳</span><span class="mnl">Diners</span>
+  </button>
+  <button class="mob-nav-btn" id="mbn-menu" onclick="openDrawer()">
+    <span class="mni">☰</span><span class="mnl">Más</span>
+  </button>
+</nav>
+
+<!-- ── OVERLAY ── -->
+<div class="mob-drawer-overlay" id="mob-overlay" onclick="closeDrawer()"></div>
+
+<!-- ── DRAWER ── -->
+<div class="mob-drawer" id="mob-drawer">
+  <div class="mob-drawer-head">
+    <div class="mob-drawer-logo">Gastos <span>GE</span></div>
+    <button class="mob-drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="mob-drawer-saldo">
+    <div class="mob-drawer-saldo-lbl">Saldo disponible</div>
+    <div class="mob-drawer-saldo-val" id="mob-saldo">S/ 0.00</div>
+  </div>
+  <div class="mob-drawer-body">
+    <div class="mob-drawer-group">Principal</div>
+    <button class="mob-drawer-item" onclick="mobGo('ingresos')"><span class="di-icon">💰</span>Ingresos</button>
+    <button class="mob-drawer-item" onclick="mobGo('pluxee')"><span class="di-icon">🍽</span>Pluxee Perú</button>
+    <div class="mob-drawer-group">Módulos</div>
+    <button class="mob-drawer-item" onclick="mobGo('comida')"><span class="di-icon">🍱</span>Comida</button>
+    <button class="mob-drawer-item" onclick="mobGo('movilidad')"><span class="di-icon">🚗</span>Movilidad</button>
+    <button class="mob-drawer-item" onclick="mobGo('tecnologia')"><span class="di-icon">💻</span>Tecnología</button>
+    <button class="mob-drawer-item" onclick="mobGo('hogar')"><span class="di-icon">🏠</span>Hogar</button>
+    <button class="mob-drawer-item" onclick="mobGo('entretenimiento')"><span class="di-icon">🎬</span>Entretenimiento</button>
+    <button class="mob-drawer-item" onclick="mobGo('recurrentes')"><span class="di-icon">🐜</span>Gastos Hormiga</button>
+    <button class="mob-drawer-item" onclick="mobGo('presupuesto')"><span class="di-icon">🎯</span>Presupuesto</button>
+    <div class="mob-drawer-group">Historial</div>
+    <button class="mob-drawer-item" onclick="mobGo('anual')"><span class="di-icon">📅</span>Año completo</button>
+    <button class="mob-drawer-item" onclick="mobGo('historial')"><span class="di-icon">📋</span>Historial</button>
+    <div class="mob-drawer-group">Sesión</div>
+    <button class="mob-drawer-item" onclick="loadAll();closeDrawer()"><span class="di-icon">↺</span>Sincronizar</button>
+    <button class="mob-drawer-item" onclick="cerrarSesion()" style="color:var(--red)"><span class="di-icon">⎋</span>Cerrar sesión</button>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════
 // CONFIG
@@ -1319,6 +1451,38 @@ function updateSidebar(){
   el.textContent=fmt(balance);
   el.className='sb-bal-val '+(balance>=0?'pos':'neg');
   document.getElementById('sb-foot').textContent=balance>=0?'Disponible este mes':'⚠️ En déficit';
+  // Sincronizar saldo en drawer móvil
+  const mobS=document.getElementById('mob-saldo');
+  if(mobS){mobS.textContent=fmt(balance);mobS.style.color=balance>=0?'var(--green)':'var(--red)';}
+}
+
+// ── MÓVIL: bottom nav y drawer ──────────────────────
+const MOB_NAV_PAGES=['dashboard','registrar','efectivo','diners'];
+function mobGo(id){
+  closeDrawer();
+  go(id);
+  // Actualizar estado activo del bottom nav
+  MOB_NAV_PAGES.forEach(p=>{
+    const btn=document.getElementById('mbn-'+p);
+    if(btn)btn.classList.toggle('active',p===id);
+  });
+  const menuBtn=document.getElementById('mbn-menu');
+  if(menuBtn)menuBtn.classList.toggle('active',!MOB_NAV_PAGES.includes(id));
+  // Actualizar drawer items
+  document.querySelectorAll('.mob-drawer-item').forEach(b=>{
+    const onclick=b.getAttribute('onclick')||'';
+    b.classList.toggle('active',onclick.includes("'"+id+"'"));
+  });
+}
+function openDrawer(){
+  document.getElementById('mob-drawer').classList.add('open');
+  document.getElementById('mob-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeDrawer(){
+  document.getElementById('mob-drawer').classList.remove('open');
+  document.getElementById('mob-overlay').classList.remove('open');
+  document.body.style.overflow='';
 }
 
 // ══════════════════════════════════════════════════════
