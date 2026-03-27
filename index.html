@@ -1298,14 +1298,15 @@ function destroyChart(id){ if(charts[id]){charts[id].destroy();delete charts[id]
 function calcSaldo(ym){
   const allYMs=[...new Set(txs.map(t=>ymOf(t.fecha)))].sort();
   // saldo anterior = todo lo acumulado hasta el mes previo
+  // EXCLUYE pluxee: es un saldo independiente, no afecta el saldo general
   const d=new Date(ym+'-01'); d.setMonth(d.getMonth()-1);
   const prevYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  const saldoAnt=txs.filter(t=>ymOf(t.fecha)<=prevYM).reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount,0)
+  const saldoAnt=txs.filter(t=>ymOf(t.fecha)<=prevYM&&t.tipo!=='pluxee').reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount,0)
     - cuotas.reduce((s,c)=>{
         const mesesUsados=allYMs.filter(m=>m<=prevYM).length;
         return s + Math.min(c.cuotasRestantes,mesesUsados)*c.montoCuota;
       },0);
-  const mt=txOfYM(ym);
+  const mt=txOfYM(ym).filter(t=>t.tipo!=='pluxee'); // Pluxee no afecta el saldo general
   const inc=mt.filter(t=>t.tipo==='ingreso').reduce((s,t)=>s+t.amount,0);
   const exp=mt.filter(t=>t.tipo!=='ingreso').reduce((s,t)=>s+t.amount,0);
   const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
