@@ -1230,7 +1230,7 @@ input,select,textarea,button{font-family:var(--font)}
 // ══════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════
-const API = 'https://script.google.com/macros/s/AKfycbzGlL6OIkA-x8P3o7tACqkDD03WTqj37jHY3c_1vmOjGxyoGqthUA66UwZBrlCQ7Za0/exec';
+const API = 'https://script.google.com/macros/s/AKfycbx3N9-I9pWRFVTP18eROLl9tnTuHqbGWeKkfv6uu4dLwUEeRAI4GvRqIXVo4kmFAZ5K/exec';
 
 const CATS = ['Almuerzo','Mercado','Salida','Transporte','Salud','Educación','Ropa','Servicios','Tecnología','Entretenimiento','Hogar','Otros'];
 const CAT_COLOR = {
@@ -1309,7 +1309,7 @@ function calcSaldo(ym){
   const mt=txOfYM(ym).filter(t=>t.tipo!=='pluxee'); // Pluxee no afecta el saldo general
   const inc=mt.filter(t=>t.tipo==='ingreso').reduce((s,t)=>s+t.amount,0);
   const exp=mt.filter(t=>t.tipo!=='ingreso').reduce((s,t)=>s+t.amount,0);
-  const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  const cuotasT=calcCuotasActivasTotal();
   return {inc, exp, cuotasT, saldoAnt, balance: saldoAnt+inc-exp-cuotasT};
 }
 
@@ -1392,6 +1392,7 @@ async function loadAll(){
     document.getElementById('loader').style.display='none';
     document.getElementById('app').style.display='flex';
     document.getElementById('topbar-month').textContent=mlabel(thisYM());
+    await reconciliarCuotas(); // Descuenta/elimina cuotas completadas automáticamente
     renderPage(document.querySelector('.page.active').id.replace('page-',''));
     updateSidebar();
   }catch(e){
@@ -1823,7 +1824,9 @@ function renderEfectivo(){
   const now=new Date();
   const esMesActual=selYM===thisYM();
   // Filtrar txs del período 1-fin de mes
-  const mt=txs.filter(t=>esEfectivo(t)&&new Date(t.fecha)>=inicio&&new Date(t.fecha)<=fin);
+  const inicioStr=inicio.getFullYear()+'-'+String(inicio.getMonth()+1).padStart(2,'0')+'-'+String(inicio.getDate()).padStart(2,'0');
+  const finStr=fin.getFullYear()+'-'+String(fin.getMonth()+1).padStart(2,'0')+'-'+String(fin.getDate()).padStart(2,'0');
+  const mt=txs.filter(t=>esEfectivo(t)&&t.fecha>=inicioStr&&t.fecha<=finStr);
   const total=mt.reduce((s,t)=>s+t.amount,0);
   const diasT=fin.getDate();
   const diasP=esMesActual?now.getDate():diasT;
@@ -1902,9 +1905,12 @@ function renderDinersPeriodo(){
   const idx=sel?parseInt(sel.value)||0:0;
   const periodos=getDinersPeridos();
   const {pStart,corte,label}=periodos[idx];
-  const pTxs=txs.filter(t=>esDiners(t)&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  // Comparar fechas como strings YYYY-MM-DD para evitar problemas de zona horaria
+  const pStartStr=pStart.getFullYear()+'-'+String(pStart.getMonth()+1).padStart(2,'0')+'-'+String(pStart.getDate()).padStart(2,'0');
+  const corteStr=corte.getFullYear()+'-'+String(corte.getMonth()+1).padStart(2,'0')+'-'+String(corte.getDate()).padStart(2,'0');
+  const pTxs=txs.filter(t=>esDiners(t)&&t.fecha>=pStartStr&&t.fecha<=corteStr);
   const consumo=pTxs.reduce((s,t)=>s+t.amount,0);
-  const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  const cuotasT=idx===0?calcCuotasActivasTotal():0;
   const total=idx===0?consumo+cuotasT:consumo;
   document.getElementById('dc-tx-title').textContent=`Consumos: ${label}`;
   document.getElementById('dc-hist-cards').innerHTML=`
@@ -1916,6 +1922,45 @@ function renderDinersPeriodo(){
     ?pTxs.map(txHTML).join('')
     :'<div class="empty">Sin consumos en este período</div>';
 }
+function calcCuotasRestantes(c){
+  // Calcula cuántas cuotas reales quedan basado en fechaInicio y períodos de corte transcurridos
+  // Cada período Diners (26-25) que pasa desde fechaInicio consume 1 cuota
+  if(!c.fechaInicio) return c.cuotasRestantes;
+  const inicio = new Date(c.fechaInicio);
+  const now = new Date();
+  // Contar cuántos períodos de corte (día 25) han pasado desde fechaInicio
+  let corteRef = new Date(inicio.getFullYear(), inicio.getMonth(), 25);
+  if(inicio.getDate() > 25) corteRef = new Date(inicio.getFullYear(), inicio.getMonth()+1, 25);
+  let periodosTranscurridos = 0;
+  let corteCheck = new Date(corteRef);
+  while(corteCheck <= now){
+    periodosTranscurridos++;
+    corteCheck = new Date(corteCheck.getFullYear(), corteCheck.getMonth()+1, 25);
+  }
+  const restantes = c.cuotasRestantes - periodosTranscurridos;
+  return Math.max(0, restantes);
+}
+
+function calcCuotasActivasTotal(){
+  // Solo suma cuotas que aún tienen pagos pendientes
+  return cuotas.filter(c=>calcCuotasRestantes(c)>0).reduce((s,c)=>s+c.montoCuota,0);
+}
+
+async function reconciliarCuotas(){
+  // Al cargar: verifica si alguna cuota debe decrementarse o eliminarse
+  const now = new Date();
+  for(let i=0;i<cuotas.length;i++){
+    const c=cuotas[i];
+    const restantes=calcCuotasRestantes(c);
+    if(restantes<=0){
+      // Cuota pagada completa — eliminar silenciosamente
+      await api('deleteCuota',{idx:String(i)}).catch(()=>{});
+      cuotas.splice(i,1);i--;
+      toast(`✅ Cuota "${c.nombre}" completada y eliminada`);
+    }
+  }
+}
+
 function renderDiners(){
   document.getElementById('dc-holder').textContent=config.cardName||'Tu nombre';
   document.getElementById('dc-num').textContent=config.cardDigits||'0000';
@@ -1932,17 +1977,31 @@ function renderDiners(){
   document.getElementById('dc-dcut').textContent=Math.max(0,Math.ceil((corte-now)/864e5))+' días';
   document.getElementById('dc-dpay').textContent=Math.max(0,Math.ceil((pago-now)/864e5))+' días';
   const pStart=new Date(corte.getFullYear(),corte.getMonth()-1,26);
-  const pTxs=txs.filter(t=>esDiners(t)&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  const pStartStr2=pStart.getFullYear()+'-'+String(pStart.getMonth()+1).padStart(2,'0')+'-'+String(pStart.getDate()).padStart(2,'0');
+  const corteStr2=corte.getFullYear()+'-'+String(corte.getMonth()+1).padStart(2,'0')+'-'+String(corte.getDate()).padStart(2,'0');
+  const pTxs=txs.filter(t=>esDiners(t)&&t.fecha>=pStartStr2&&t.fecha<=corteStr2);
   const consumed=pTxs.reduce((s,t)=>s+t.amount,0);
-  const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  const cuotasT=calcCuotasActivasTotal();
   document.getElementById('dc-total').textContent=fmt(consumed+cuotasT);
-  // cuotas list
+  // cuotas list — mostrar cuotas restantes calculadas según períodos transcurridos
   const cEl=document.getElementById('cuotas-list');
-  cEl.innerHTML=cuotas.length?cuotas.map((c,i)=>`<div class="cuota-item">
-    <div class="cuota-body"><div class="cuota-name">${c.nombre}</div><div class="cuota-meta">${c.cuotasRestantes} cuota(s) restante(s) · <span class="tag ${c.tipo==='sin-int'?'tag-green':'tag-amber'}">${c.tipo==='sin-int'?'Sin interés':'Con interés'}</span></div></div>
-    <div class="cuota-amt">${fmt(c.montoCuota)}/mes</div>
-    <button class="tx-btn del" onclick="deleteCuota(${i})">✕</button>
-  </div>`).join(''):'<div class="empty">Sin cuotas fijas registradas</div>';
+  cEl.innerHTML=cuotas.length?cuotas.map((c,i)=>{
+    const restantes=calcCuotasRestantes(c);
+    const agotada=restantes<=0;
+    return `<div class="cuota-item" style="${agotada?'opacity:0.5':''}">
+      <div class="cuota-body">
+        <div class="cuota-name">${c.nombre}</div>
+        <div class="cuota-meta">
+          ${agotada
+            ? '<span class="tag tag-green">✅ Pagada completa</span>'
+            : `<strong style="color:var(--amber)">${restantes}</strong> cuota(s) restante(s)`}
+          · <span class="tag ${c.tipo==='sin-int'?'tag-green':'tag-amber'}">${c.tipo==='sin-int'?'Sin interés':'Con interés'}</span>
+        </div>
+      </div>
+      <div class="cuota-amt" style="color:${agotada?'var(--green)':'var(--amber)'}">${agotada?'Completada':fmt(c.montoCuota)+'/mes'}</div>
+      <button class="tx-btn del" onclick="deleteCuota(${i})" title="Eliminar">✕</button>
+    </div>`;
+  }).join(''):'<div class="empty">Sin cuotas fijas registradas</div>';
   // El historial de consumos lo maneja renderDinersPeriodo
   populateDcPeriodos();
   renderDinersPeriodo();
@@ -1977,9 +2036,11 @@ function calcPago(){
   let corte=new Date(now.getFullYear(),now.getMonth(),25);
   if(now.getDate()>25)corte=new Date(now.getFullYear(),now.getMonth()+1,25);
   const pStart=new Date(corte.getFullYear(),corte.getMonth()-1,26);
-  const pTxs=txs.filter(t=>esDiners(t)&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  const pStartStr2=pStart.getFullYear()+'-'+String(pStart.getMonth()+1).padStart(2,'0')+'-'+String(pStart.getDate()).padStart(2,'0');
+  const corteStr2=corte.getFullYear()+'-'+String(corte.getMonth()+1).padStart(2,'0')+'-'+String(corte.getDate()).padStart(2,'0');
+  const pTxs=txs.filter(t=>esDiners(t)&&t.fecha>=pStartStr2&&t.fecha<=corteStr2);
   const consumo=pTxs.reduce((s,t)=>s+t.amount,0);
-  const cuotasT=cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  const cuotasT=calcCuotasActivasTotal();
   const total=consumo+cuotasT;
   if(!total){document.getElementById('pay-result').innerHTML='<div class="empty">Sin consumos en el período</div>';return;}
   const rate=(parseFloat(config.cardRate)||4.5)/100;
@@ -2124,7 +2185,7 @@ function renderPresTracking(){
   const sp={};CATS.forEach(c=>{sp[c]=mt.filter(t=>t.categoria===c).reduce((s,t)=>s+t.amount,0);});
   sp['Movilidad transporte']=mt.filter(t=>t.tipo==='transporte').reduce((s,t)=>s+t.amount,0);
   sp['Taxis']=mt.filter(t=>t.tipo==='taxi').reduce((s,t)=>s+t.amount,0);
-  sp['Diners']=mt.filter(t=>esDiners(t)).reduce((s,t)=>s+t.amount,0)+cuotas.reduce((s,c)=>s+c.montoCuota,0);
+  sp['Diners']=mt.filter(t=>esDiners(t)).reduce((s,t)=>s+t.amount,0)+calcCuotasActivasTotal();
   sp['Hogar Lince']=hogarGastos.filter(h=>h.depto==='Lince'&&ymOf(h.fecha)===ym).reduce((s,h)=>s+h.monto,0);
   sp['Hogar Villa Sol']=hogarGastos.filter(h=>h.depto==='Villa Sol'&&ymOf(h.fecha)===ym).reduce((s,h)=>s+h.monto,0);
   sp['Hogar Huandoy']=hogarGastos.filter(h=>h.depto==='Huandoy'&&ymOf(h.fecha)===ym).reduce((s,h)=>s+h.monto,0);
@@ -2369,7 +2430,9 @@ function renderPluxeePeriodo(){
   const idx=sel?parseInt(sel.value)||0:0;
   const periodos=getPluxeePeriodos();
   const {pStart,corte,label}=periodos[idx];
-  const pTxs=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  const pStartStr=pStart.getFullYear()+'-'+String(pStart.getMonth()+1).padStart(2,'0')+'-'+String(pStart.getDate()).padStart(2,'0');
+  const corteStr=corte.getFullYear()+'-'+String(corte.getMonth()+1).padStart(2,'0')+'-'+String(corte.getDate()).padStart(2,'0');
+  const pTxs=txs.filter(t=>t.tipo==='pluxee'&&t.fecha>=pStartStr&&t.fecha<=corteStr);
   const gastado=pTxs.reduce((s,t)=>s+t.amount,0);
   const disponible=Math.max(0,PLUXEE_RECARGA-gastado);
   const pct=Math.min(100,Math.round(gastado/PLUXEE_RECARGA*100));
@@ -2403,7 +2466,9 @@ function renderPluxee(){
   // KPIs del período actual
   const periodos=getPluxeePeriodos();
   const {pStart,corte}=periodos[0];
-  const gastadoMes=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte)
+  const pS=pStart.getFullYear()+'-'+String(pStart.getMonth()+1).padStart(2,'0')+'-'+String(pStart.getDate()).padStart(2,'0');
+  const pC=corte.getFullYear()+'-'+String(corte.getMonth()+1).padStart(2,'0')+'-'+String(corte.getDate()).padStart(2,'0');
+  const gastadoMes=txs.filter(t=>t.tipo==='pluxee'&&t.fecha>=pS&&t.fecha<=pC)
     .reduce((s,t)=>s+t.amount,0);
   const totalPxTxs=txs.filter(t=>t.tipo==='pluxee');
   document.getElementById('px-cards').innerHTML=`
