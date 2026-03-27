@@ -163,6 +163,20 @@ input,select,textarea,button{font-family:var(--font)}
 .tpill.t-transporte{background:var(--teal2);color:var(--teal);border-color:rgba(20,184,166,0.3)}
 .tpill.t-ingreso{background:var(--sky2);color:var(--sky);border-color:rgba(14,165,233,0.3)}
 .tpill.t-hogar{background:rgba(249,115,22,0.12);color:#f97316;border-color:rgba(249,115,22,0.3)}
+.tpill.t-pluxee{background:rgba(34,197,94,0.12);color:#22c55e;border-color:rgba(34,197,94,0.3)}
+/* ── PLUXEE CARD ── */
+.px-visual{background:linear-gradient(135deg,#0a1f0a 0%,#0d2b1a 40%,#0a1a0d 100%);border:1px solid rgba(34,197,94,0.25);border-radius:20px;padding:22px 24px;position:relative;overflow:hidden;margin-bottom:16px}
+.px-visual::after{content:'';position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:rgba(34,197,94,0.05)}
+.px-brand{font-size:10px;font-weight:700;letter-spacing:2.5px;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:10px}
+.px-logo{font-size:22px;font-weight:800;color:#22c55e;margin-bottom:14px;letter-spacing:-0.5px}
+.px-row{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px}
+.px-holder{font-size:11px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1.5px}
+.px-balance{text-align:right}
+.px-bal-lbl{font-size:9px;color:rgba(255,255,255,0.35);margin-bottom:2px}
+.px-bal-val{font-size:26px;font-weight:700;color:#22c55e;font-family:var(--mono)}
+.px-dates{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.px-date{font-size:10px;color:rgba(255,255,255,0.35)}
+.px-date span{color:rgba(255,255,255,0.7);font-weight:600}
 .tpill.t-hormiga{background:rgba(132,204,22,0.12);color:#84cc16;border-color:rgba(132,204,22,0.3)}
 
 /* ── TRANSACTION LIST ── */
@@ -436,6 +450,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="nav-group">Módulos</div>
       <button class="nav-item" onclick="go('efectivo')"><span class="nav-icon">💵</span>Efectivo</button>
       <button class="nav-item" onclick="go('diners')"><span class="nav-icon">💳</span>Diners Club</button>
+      <button class="nav-item" onclick="go('pluxee')"><span class="nav-icon">🍽</span>Pluxee Perú</button>
       <button class="nav-item" onclick="go('comida')"><span class="nav-icon">🍽</span>Comida</button>
       <button class="nav-item" onclick="go('movilidad')"><span class="nav-icon">🚗</span>Movilidad</button>
       <button class="nav-item" onclick="go('tecnologia')"><span class="nav-icon">💻</span>Tecnología</button>
@@ -533,7 +548,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="page" id="page-registrar">
         <div class="page-header">
           <div class="page-title">Registrar gasto</div>
-          <div class="page-sub">Efectivo · Diners Club · Transporte · Hogar</div>
+          <div class="page-sub">Efectivo · Diners Club · Pluxee · Transporte · Hogar</div>
         </div>
         <div class="panel mb14">
           <div class="type-pills">
@@ -542,6 +557,7 @@ input,select,textarea,button{font-family:var(--font)}
             <button class="tpill" id="tp-transporte" onclick="setGasto('transporte')">🚌 Transporte trabajo</button>
             <button class="tpill" id="tp-taxi" onclick="setGasto('taxi')">🚕 Taxi</button>
             <button class="tpill" id="tp-hogar" onclick="setGasto('hogar')">🏠 Hogar</button>
+            <button class="tpill" id="tp-pluxee" onclick="setGasto('pluxee')">🍽 Pluxee</button>
             <button class="tpill" id="tp-hormiga" onclick="setGasto('hormiga')">🐜 Hormiga</button>
           </div>
 
@@ -872,6 +888,52 @@ input,select,textarea,button{font-family:var(--font)}
         <div class="panel">
           <div class="panel-head"><div class="panel-title" id="dc-tx-title">Consumos del período actual</div></div>
           <div class="tx-list" id="dc-tx-list"></div>
+        </div>
+      </div>
+
+      <!-- ═══ PLUXEE ═══ -->
+      <div class="page" id="page-pluxee">
+        <div class="page-header">
+          <div class="page-title">🍽 Pluxee Perú</div>
+          <div class="page-sub">Tarjeta de alimentación · Recarga S/ 163 el día 26</div>
+        </div>
+        <!-- Tarjeta visual -->
+        <div class="px-visual">
+          <div class="px-brand">Pluxee · Beneficios de Alimentación</div>
+          <div class="px-logo">Pluxee</div>
+          <div class="px-row">
+            <div class="px-holder">Tarjeta Alimentación</div>
+            <div class="px-balance">
+              <div class="px-bal-lbl">Saldo disponible estimado</div>
+              <div class="px-bal-val" id="px-saldo">S/ 0.00</div>
+            </div>
+          </div>
+          <div class="px-dates">
+            <div class="px-date">Recarga mensual: <span>S/ 163.00</span></div>
+            <div class="px-date">Próxima recarga: <span id="px-prox-recarga">—</span></div>
+            <div class="px-date">Días para recarga: <span id="px-dias-recarga">—</span></div>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="cards" id="px-cards"></div>
+
+        <!-- Selector período -->
+        <div class="panel mb14">
+          <div class="panel-head"><div class="panel-title">📋 Historial por período</div></div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="field" style="margin:0;flex:1;min-width:200px">
+              <select id="px-periodo-sel" onchange="renderPluxeePeriodo()" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:13px;width:100%;outline:none"></select>
+            </div>
+            <button onclick="pxPeriodoActual()" class="btn btn-ghost btn-sm">Período actual</button>
+          </div>
+          <div id="px-hist-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px"></div>
+        </div>
+
+        <!-- Lista consumos -->
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title" id="px-tx-title">Consumos del período actual</div></div>
+          <div class="tx-list" id="px-tx-list"></div>
         </div>
       </div>
 
@@ -1306,7 +1368,7 @@ function go(id){
   renderPage(id);
 }
 function renderPage(id){
-  const map={dashboard:renderDashboard,ingresos:renderIngresos,registrar:renderRecent,efectivo:renderEfectivo,diners:renderDiners,comida:renderComida,movilidad:renderMovilidad,tecnologia:renderTecnologia,hogar:renderHogar,entretenimiento:renderEntretenimiento,recurrentes:renderRecurrentes,presupuesto:renderPresupuesto,anual:renderAnual,historial:renderHistorial};
+  const map={dashboard:renderDashboard,ingresos:renderIngresos,registrar:renderRecent,efectivo:renderEfectivo,diners:renderDiners,comida:renderComida,movilidad:renderMovilidad,tecnologia:renderTecnologia,hogar:renderHogar,entretenimiento:renderEntretenimiento,pluxee:renderPluxee,recurrentes:renderRecurrentes,presupuesto:renderPresupuesto,anual:renderAnual,historial:renderHistorial};
   if(map[id]) map[id]();
 }
 
@@ -1314,9 +1376,9 @@ function renderPage(id){
 // TX HTML
 // ══════════════════════════════════════════════════════
 function txHTML(t){
-  const isInc=t.tipo==='ingreso', isDin=t.tipo==='diners', isTrans=t.tipo==='transporte', isTaxi=t.tipo==='taxi';
-  const col=isInc?'#10b981':isDin?'#f59e0b':isTrans?'#14b8a6':isTaxi?'#0ea5e9':(CAT_COLOR[t.categoria]||'#6b7280');
-  const icon=isTrans?'🚌':isTaxi?'🚕':isInc?'💰':isDin?'💳':(CAT_ICON[t.categoria]||'📦');
+  const isInc=t.tipo==='ingreso', isDin=t.tipo==='diners', isTrans=t.tipo==='transporte', isTaxi=t.tipo==='taxi', isPx=t.tipo==='pluxee';
+  const col=isInc?'#10b981':isDin?'#f59e0b':isTrans?'#14b8a6':isTaxi?'#0ea5e9':isPx?'#22c55e':(CAT_COLOR[t.categoria]||'#6b7280');
+  const icon=isTrans?'🚌':isTaxi?'🚕':isInc?'💰':isDin?'💳':isPx?'🍽':(CAT_ICON[t.categoria]||'📦');
   const sign=isInc?'+':'-';
   const cls=isInc?'c-green':'c-red';
   // tags
@@ -1405,6 +1467,7 @@ function renderDashboard(){
     <div class="kcard"><div class="kcard-label">Diners Club</div><div class="kcard-val" style="color:var(--amber)">${fmt(dinTotal)}</div><div class="kcard-foot">Consumos + cuotas</div></div>
     <div class="kcard"><div class="kcard-label">Movilidad</div><div class="kcard-val" style="color:var(--teal)">${fmt(mobTotal)}</div><div class="kcard-foot">Transporte + taxis</div></div>
     <div class="kcard"><div class="kcard-label">Tecnología</div><div class="kcard-val" style="color:var(--sky)">${fmt(tecTotal)}</div><div class="kcard-foot">Gadgets y suscripciones</div></div>
+    <div class="kcard"><div class="kcard-label">Pluxee</div><div class="kcard-val" style="color:#22c55e">${fmt(calcPluxeeSaldo())}</div><div class="kcard-foot">Saldo disponible</div></div>
     <div class="kcard"><div class="kcard-label">Balance neto</div><div class="kcard-val" style="color:${balance>=0?'var(--green)':'var(--red)'}">${fmt(balance)}</div><div class="kcard-foot">${balance>=0?'Disponible':'Déficit'}</div></div>
   `;
 
@@ -1489,10 +1552,10 @@ function clearIngreso(){['ing-desc','ing-monto','ing-motivo'].forEach(id=>docume
 // ══════════════════════════════════════════════════════
 function setGasto(t){
   gastoTipo=t;
-  ['efectivo','diners','transporte','taxi','hogar','hormiga'].forEach(x=>{
+  ['efectivo','diners','transporte','taxi','hogar','hormiga','pluxee'].forEach(x=>{
     const p=document.getElementById('tp-'+x);if(p){p.className='tpill';if(x===t)p.className='tpill t-'+t;}
   });
-  document.getElementById('g-cat-wrap').style.display=(t==='transporte'||t==='taxi'||t==='hogar'||t==='hormiga')?'none':'';
+  document.getElementById('g-cat-wrap').style.display=(t==='transporte'||t==='taxi'||t==='hogar'||t==='hormiga'||t==='pluxee')?'none':'';
   document.getElementById('g-diners-extra').style.display=t==='diners'?'':'none';
   document.getElementById('g-transp-extra').style.display=t==='transporte'?'':'none';
   document.getElementById('g-taxi-extra').style.display=t==='taxi'?'':'none';
@@ -1580,6 +1643,16 @@ async function addGasto(){
       clearGasto();renderRecent();updateSidebar();toast('✅ Gasto de hogar registrado');
     }
     finally{btn.disabled=false;btn.textContent='💾 Registrar gasto';}
+    return;
+  } else if(gastoTipo==='pluxee'){
+    cat='Comida';
+    extra.motivo='Pluxee';
+    const tx={id:String(Date.now()),fecha,descripcion:desc||'Pluxee',monto:String(monto),tipo:'pluxee',categoria:'Comida',...extra,notas};
+    try{
+      await api('add',{tx});
+      txs.unshift({...tx,amount:monto});
+      clearGasto();renderRecent();updateSidebar();toast('✅ Gasto Pluxee registrado');
+    }finally{btn.disabled=false;btn.textContent='💾 Registrar gasto';}
     return;
   } else if(gastoTipo==='hormiga'){
     const medio=document.getElementById('g-hormiga-medio').value;
@@ -1718,16 +1791,24 @@ function renderEfectivo(){
 // DINERS
 // ══════════════════════════════════════════════════════
 function getDinersPeridos(){
-  // Genera lista de períodos Diners (26 del mes anterior al 25 del mes actual)
-  // para los últimos 12 meses
+  // Período Diners: del 26 de un mes al 25 del siguiente
+  // Si hoy > 25 → período actual: 26-este-mes al 25-mes-siguiente
+  // Si hoy <= 25 → período actual: 26-mes-anterior al 25-este-mes
   const periodos=[];
   const now=new Date();
+  // Calcular el corte del período actual
+  let corteActual;
+  if(now.getDate()>25){
+    corteActual=new Date(now.getFullYear(),now.getMonth()+1,25);
+  } else {
+    corteActual=new Date(now.getFullYear(),now.getMonth(),25);
+  }
+  // Generar los últimos 13 períodos hacia atrás
   for(let i=0;i<13;i++){
-    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
-    const corte=new Date(d.getFullYear(),d.getMonth(),25);
-    const pStart=new Date(d.getFullYear(),d.getMonth()-1,26);
+    const corte=new Date(corteActual.getFullYear(),corteActual.getMonth()-i,25);
+    const pStart=new Date(corte.getFullYear(),corte.getMonth()-1,26);
     const label=`${MONTHS[pStart.getMonth()].slice(0,3)} 26 → ${MONTHS[corte.getMonth()].slice(0,3)} 25 ${corte.getFullYear()}`;
-    periodos.push({label,pStart,corte,key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`});
+    periodos.push({label,pStart,corte});
   }
   return periodos;
 }
@@ -1788,8 +1869,7 @@ function renderDiners(){
     <div class="cuota-amt">${fmt(c.montoCuota)}/mes</div>
     <button class="tx-btn del" onclick="deleteCuota(${i})">✕</button>
   </div>`).join(''):'<div class="empty">Sin cuotas fijas registradas</div>';
-  document.getElementById('dc-tx-list').innerHTML=pTxs.length?pTxs.map(txHTML).join(''):'<div class="empty">Sin consumos en el período actual</div>';
-  // Poblar selector de períodos históricos
+  // El historial de consumos lo maneja renderDinersPeriodo
   populateDcPeriodos();
   renderDinersPeriodo();
 }
@@ -2150,6 +2230,118 @@ function renderEntretenimiento(){
 }
 
 // ══════════════════════════════════════════════════════
+// PLUXEE
+// ══════════════════════════════════════════════════════
+const PLUXEE_RECARGA = 163;
+const PLUXEE_DIA_RECARGA = 26;
+
+function getPluxeePeriodos(){
+  // Período Pluxee: del 26 de un mes al 25 del siguiente (igual que Diners)
+  const periodos=[];
+  const now=new Date();
+  let corteActual;
+  if(now.getDate()>=PLUXEE_DIA_RECARGA){
+    corteActual=new Date(now.getFullYear(),now.getMonth()+1,25);
+  } else {
+    corteActual=new Date(now.getFullYear(),now.getMonth(),25);
+  }
+  for(let i=0;i<13;i++){
+    const corte=new Date(corteActual.getFullYear(),corteActual.getMonth()-i,25);
+    const pStart=new Date(corte.getFullYear(),corte.getMonth()-1,26);
+    const label=`${MONTHS[pStart.getMonth()].slice(0,3)} 26 → ${MONTHS[corte.getMonth()].slice(0,3)} 25 ${corte.getFullYear()}`;
+    periodos.push({label,pStart,corte});
+  }
+  return periodos;
+}
+
+function calcPluxeeSaldo(){
+  // Calcula saldo acumulado de Pluxee
+  // Suma recargas desde el inicio y resta gastos
+  const now=new Date();
+  const periodos=getPluxeePeriodos();
+  // Encontrar primer período con datos
+  const allPxTxs=txs.filter(t=>t.tipo==='pluxee');
+  if(!allPxTxs.length) return PLUXEE_RECARGA; // Si no hay gastos, saldo = recarga del mes
+  // Calcular saldo período actual
+  const {pStart,corte}=periodos[0];
+  const gastosActual=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte)
+    .reduce((s,t)=>s+t.amount,0);
+  // Saldo previo acumulado (todos los períodos anteriores)
+  let saldoPrevio=0;
+  for(let i=1;i<periodos.length;i++){
+    const p=periodos[i];
+    const gastosP=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=p.pStart&&new Date(t.fecha)<=p.corte)
+      .reduce((s,t)=>s+t.amount,0);
+    saldoPrevio+=PLUXEE_RECARGA-gastosP;
+  }
+  return Math.max(0,saldoPrevio+PLUXEE_RECARGA-gastosActual);
+}
+
+function populatePxPeriodos(){
+  const sel=document.getElementById('px-periodo-sel');
+  if(!sel)return;
+  const periodos=getPluxeePeriodos();
+  sel.innerHTML=periodos.map((p,i)=>`<option value="${i}">${i===0?'Período actual: ':i===1?'Período anterior: ':''}${p.label}</option>`).join('');
+}
+
+function pxPeriodoActual(){
+  const sel=document.getElementById('px-periodo-sel');
+  if(sel)sel.value='0';
+  renderPluxeePeriodo();
+}
+
+function renderPluxeePeriodo(){
+  const sel=document.getElementById('px-periodo-sel');
+  const idx=sel?parseInt(sel.value)||0:0;
+  const periodos=getPluxeePeriodos();
+  const {pStart,corte,label}=periodos[idx];
+  const pTxs=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte);
+  const gastado=pTxs.reduce((s,t)=>s+t.amount,0);
+  const disponible=Math.max(0,PLUXEE_RECARGA-gastado);
+  const pct=Math.min(100,Math.round(gastado/PLUXEE_RECARGA*100));
+  const col=pct>=90?'var(--red)':pct>=70?'var(--amber)':'var(--green)';
+  document.getElementById('px-tx-title').textContent=`Consumos: ${label}`;
+  document.getElementById('px-hist-cards').innerHTML=`
+    <div class="kcard"><div class="kcard-label">Recarga del período</div><div class="kcard-val" style="color:#22c55e">${fmt(PLUXEE_RECARGA)}</div><div class="kcard-foot">Depósito día 26</div></div>
+    <div class="kcard"><div class="kcard-label">Gastado</div><div class="kcard-val" style="color:var(--red)">${fmt(gastado)}</div><div class="kcard-foot">${pTxs.length} consumos</div></div>
+    <div class="kcard"><div class="kcard-label">Disponible período</div><div class="kcard-val" style="color:${col}">${fmt(disponible)}</div><div class="kcard-foot">${pct}% usado</div></div>
+  `;
+  // Barra de progreso
+  const barHtml=`<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:5px"><span>Uso del período</span><span>${pct}%</span></div><div style="height:8px;background:var(--s3);border-radius:99px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${col};border-radius:99px;transition:width 0.4s"></div></div></div>`;
+  document.getElementById('px-hist-cards').innerHTML+=barHtml;
+  document.getElementById('px-tx-list').innerHTML=pTxs.length
+    ?pTxs.map(txHTML).join('')
+    :'<div class="empty">Sin consumos en este período</div>';
+}
+
+function renderPluxee(){
+  // Próxima recarga
+  const now=new Date();
+  let proxRecarga=new Date(now.getFullYear(),now.getMonth(),PLUXEE_DIA_RECARGA);
+  if(now.getDate()>=PLUXEE_DIA_RECARGA) proxRecarga=new Date(now.getFullYear(),now.getMonth()+1,PLUXEE_DIA_RECARGA);
+  const diasParaRecarga=Math.max(0,Math.ceil((proxRecarga-now)/864e5));
+  document.getElementById('px-prox-recarga').textContent=proxRecarga.toLocaleDateString('es-PE',{day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('px-dias-recarga').textContent=diasParaRecarga+' días';
+  // Saldo acumulado
+  const saldo=calcPluxeeSaldo();
+  document.getElementById('px-saldo').textContent=fmt(saldo);
+  // KPIs del período actual
+  const periodos=getPluxeePeriodos();
+  const {pStart,corte}=periodos[0];
+  const gastadoMes=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte)
+    .reduce((s,t)=>s+t.amount,0);
+  const totalPxTxs=txs.filter(t=>t.tipo==='pluxee');
+  document.getElementById('px-cards').innerHTML=`
+    <div class="kcard"><div class="kcard-label">Saldo disponible</div><div class="kcard-val" style="color:#22c55e">${fmt(saldo)}</div><div class="kcard-foot">Acumulado + recarga</div></div>
+    <div class="kcard"><div class="kcard-label">Gastado este período</div><div class="kcard-val" style="color:var(--red)">${fmt(gastadoMes)}</div><div class="kcard-foot">Del total S/ ${PLUXEE_RECARGA}</div></div>
+    <div class="kcard"><div class="kcard-label">Recarga mensual</div><div class="kcard-val" style="color:var(--text)">${fmt(PLUXEE_RECARGA)}</div><div class="kcard-foot">Cada día ${PLUXEE_DIA_RECARGA}</div></div>
+    <div class="kcard"><div class="kcard-label">Total consumido</div><div class="kcard-val" style="color:var(--text2);font-size:16px">${fmt(totalPxTxs.reduce((s,t)=>s+t.amount,0))}</div><div class="kcard-foot">Historial completo</div></div>
+  `;
+  populatePxPeriodos();
+  renderPluxeePeriodo();
+}
+
+// ══════════════════════════════════════════════════════
 // DUPLICADOS
 // ══════════════════════════════════════════════════════
 let _dupeIds=[];
@@ -2307,7 +2499,6 @@ async function deleteRec(id){
 // ── LOGIN ──
 function cerrarSesion(){
   if(!confirm('¿Cerrar sesión?'))return;
-  localStorage.removeItem('ge_auth');
   sessionStorage.removeItem('ge_auth');
   location.reload();
 }
@@ -2318,7 +2509,6 @@ function doLogin(){
   if(user==='egusvia'&&pass==='070326'){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('loader').style.display='flex';
-    localStorage.setItem('ge_auth','1');
     sessionStorage.setItem('ge_auth','1');
     loadAll();
   } else {
@@ -2330,10 +2520,9 @@ function doLogin(){
 }
 // Verificar si ya estaba logueado
 (function(){
-  if(localStorage.getItem('ge_auth')==='1'||sessionStorage.getItem('ge_auth')==='1'){
+  if(sessionStorage.getItem('ge_auth')==='1'){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('loader').style.display='flex';
-    // loadAll se llama desde el init al final
   }
 })();
 
@@ -2351,7 +2540,7 @@ if('serviceWorker' in navigator){
 document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target.id==='modal-overlay')closeModal();});
 document.getElementById('g-pago-tipo').addEventListener('change',onPagoTipoChange);
 // Llamar loadAll si ya está autenticado
-if(localStorage.getItem('ge_auth')==='1'||sessionStorage.getItem('ge_auth')==='1'){
+if(sessionStorage.getItem('ge_auth')==='1'){
   loadAll();
 }
 </script>
