@@ -915,6 +915,21 @@ input,select,textarea,button{font-family:var(--font)}
           </div>
         </div>
 
+        <!-- Config saldo inicial -->
+        <div class="panel mb14">
+          <div class="panel-head"><div class="panel-title">⚙️ Saldo inicial</div></div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+            Ingresa el saldo que tenías antes de tu primer registro en la app. Este monto se sumará al cálculo acumulado.
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="field" style="margin:0;flex:1">
+              <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;font-weight:600;display:block;margin-bottom:4px">Saldo inicial (S/)</label>
+              <input type="number" id="px-saldo-inicial" step="0.01" placeholder="Ej. 8.49"
+                style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:9px 11px;color:var(--text);font-size:13px;width:100%;outline:none">
+            </div>
+            <button class="btn btn-blue btn-sm" style="margin-top:18px" onclick="savePluxeeSaldoInicial()">Guardar</button>
+          </div>
+        </div>
         <!-- KPIs -->
         <div class="cards" id="px-cards"></div>
 
@@ -2255,26 +2270,28 @@ function getPluxeePeriodos(){
 }
 
 function calcPluxeeSaldo(){
-  // Calcula saldo acumulado de Pluxee
-  // Suma recargas desde el inicio y resta gastos
-  const now=new Date();
-  const periodos=getPluxeePeriodos();
-  // Encontrar primer período con datos
-  const allPxTxs=txs.filter(t=>t.tipo==='pluxee');
-  if(!allPxTxs.length) return PLUXEE_RECARGA; // Si no hay gastos, saldo = recarga del mes
-  // Calcular saldo período actual
-  const {pStart,corte}=periodos[0];
-  const gastosActual=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=pStart&&new Date(t.fecha)<=corte)
-    .reduce((s,t)=>s+t.amount,0);
-  // Saldo previo acumulado (todos los períodos anteriores)
-  let saldoPrevio=0;
-  for(let i=1;i<periodos.length;i++){
-    const p=periodos[i];
-    const gastosP=txs.filter(t=>t.tipo==='pluxee'&&new Date(t.fecha)>=p.pStart&&new Date(t.fecha)<=p.corte)
-      .reduce((s,t)=>s+t.amount,0);
-    saldoPrevio+=PLUXEE_RECARGA-gastosP;
+  // Lógica correcta:
+  // 1) Saldo inicial configurable (sobrante de antes del primer registro)
+  // 2) Solo sumar recargas de períodos que tienen al menos 1 gasto O son el período actual
+  // 3) Saldo = saldoInicial + recargas de períodos con actividad - total gastado
+  const saldoInicial = parseFloat(config.pluxeeSaldoInicial||'0');
+  const allPxTxs = txs.filter(t=>t.tipo==='pluxee');
+  const totalGastado = allPxTxs.reduce((s,t)=>s+t.amount,0);
+  if(!allPxTxs.length) return saldoInicial + PLUXEE_RECARGA;
+  // Encontrar fecha del primer gasto
+  const fechas = allPxTxs.map(t=>new Date(t.fecha)).sort((a,b)=>a-b);
+  const primerGasto = fechas[0];
+  // Calcular cuántos períodos van desde el primer gasto hasta ahora
+  const periodos = getPluxeePeriodos();
+  // Contar períodos que incluyen el primer gasto o posteriores
+  let recargasAcumuladas = 0;
+  for(const p of periodos){
+    // Si el período es posterior o igual al del primer gasto, sumar recarga
+    if(p.corte >= primerGasto){
+      recargasAcumuladas += PLUXEE_RECARGA;
+    }
   }
-  return Math.max(0,saldoPrevio+PLUXEE_RECARGA-gastosActual);
+  return Math.max(0, saldoInicial + recargasAcumuladas - totalGastado);
 }
 
 function populatePxPeriodos(){
@@ -2314,7 +2331,19 @@ function renderPluxeePeriodo(){
     :'<div class="empty">Sin consumos en este período</div>';
 }
 
+function savePluxeeSaldoInicial(){
+  const val=document.getElementById('px-saldo-inicial').value;
+  if(val===''){toast('Ingresa un monto','warn');return;}
+  config.pluxeeSaldoInicial=String(parseFloat(val)||0);
+  api('saveConfig',{config}).then(()=>{
+    toast('✅ Saldo inicial guardado');
+    renderPluxee();
+  });
+}
 function renderPluxee(){
+  // Cargar saldo inicial configurado
+  const siInput=document.getElementById('px-saldo-inicial');
+  if(siInput) siInput.value=config.pluxeeSaldoInicial||'';
   // Próxima recarga
   const now=new Date();
   let proxRecarga=new Date(now.getFullYear(),now.getMonth(),PLUXEE_DIA_RECARGA);
