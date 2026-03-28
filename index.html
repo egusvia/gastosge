@@ -638,7 +638,7 @@ input,select,textarea,button{font-family:var(--font)}
             <div class="field"><label>💰 Monto (S/)</label>
               <div style="position:relative">
                 <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--text3);pointer-events:none">S/</span>
-                <input type="number" id="g-monto" placeholder="0.00" step="0.01" min="0" style="padding-left:30px;font-family:var(--mono);font-weight:700">
+                <input type="number" id="g-monto" placeholder="0.00" step="0.01" min="0" style="padding-left:30px;font-family:var(--mono);font-weight:700" oninput="updateUSDPreview()">
               </div>
             </div>
           </div>
@@ -703,6 +703,27 @@ input,select,textarea,button{font-family:var(--font)}
                   <option value="24">24 cuotas</option>
                 </select>
               </div>
+            </div>
+            <!-- Moneda -->
+            <div class="fg">
+              <div class="field">
+                <label>🌍 Moneda del gasto</label>
+                <select id="g-moneda" onchange="onMonedaChange()">
+                  <option value="PEN">🇵🇪 Soles (S/)</option>
+                  <option value="USD">🇺🇸 Dólares (US$)</option>
+                </select>
+              </div>
+              <div class="field" id="g-tc-wrap" style="display:none">
+                <label>💱 Tipo de cambio (S/ por US$)</label>
+                <div style="position:relative">
+                  <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text3);pointer-events:none">S/</span>
+                  <input type="number" id="g-tc" placeholder="3.75" step="0.001" min="1" style="padding-left:26px;font-family:var(--mono)" oninput="updateUSDPreview()">
+                </div>
+              </div>
+            </div>
+            <!-- Preview conversión -->
+            <div id="g-usd-preview" style="display:none;padding:10px 12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:var(--r);font-size:12px;color:var(--text2);margin-top:2px">
+              💱 <span id="g-usd-preview-txt">—</span>
             </div>
           </div>
 
@@ -1593,6 +1614,7 @@ function txHTML(t){
   if(t.tipoPago==='cuotas-sin-int')tags.push('<span class="tag tag-green">sin interés</span>');
   if(t.tipoPago==='cuotas-con-int')tags.push('<span class="tag tag-amber">con interés</span>');
   if(t.nCuotas&&t.nCuotas!=='')tags.push(`<span class="tag tag-purple">${t.nCuotas} cuotas</span>`);
+  if(t.moneda==='USD')tags.push(`<span class="tag tag-sky">🇺🇸 US$ ${parseFloat(t.montoOriginal||0).toFixed(2)}</span>`);
   if(t.taxiPago==='Diners')tags.push('<span class="tag tag-amber">Diners</span>');
   if(t.taxiPago==='Efectivo')tags.push('<span class="tag tag-green">Efectivo</span>');
   if(t.taxiMotivo)tags.push(`<span class="tag tag-sky">${t.taxiMotivo}</span>`);
@@ -1836,11 +1858,44 @@ function onPagoTipoChange2(){
   document.getElementById('g-ncuotas-wrap').style.display=v==='directo'?'none':'';
 }
 function onPagoTipoChange(){onPagoTipoChange2();}
+
+function onMonedaChange(){
+  const moneda=document.getElementById('g-moneda').value;
+  const isUSD=moneda==='USD';
+  document.getElementById('g-tc-wrap').style.display=isUSD?'':'none';
+  // Recuperar último TC usado
+  if(isUSD&&!document.getElementById('g-tc').value){
+    const lastTC=localStorage.getItem('lastTC')||'3.75';
+    document.getElementById('g-tc').value=lastTC;
+  }
+  updateUSDPreview();
+}
+
+function updateUSDPreview(){
+  const moneda=document.getElementById('g-moneda')?document.getElementById('g-moneda').value:'PEN';
+  const monto=parseFloat(document.getElementById('g-monto').value)||0;
+  const tc=parseFloat(document.getElementById('g-tc')?document.getElementById('g-tc').value:0)||0;
+  const prev=document.getElementById('g-usd-preview');
+  const prevTxt=document.getElementById('g-usd-preview-txt');
+  if(moneda==='USD'&&monto>0&&tc>0&&prev&&prevTxt){
+    const enSoles=monto*tc;
+    prev.style.display='';
+    prevTxt.textContent=`US$ ${monto.toFixed(2)} × S/ ${tc.toFixed(3)} = S/ ${enSoles.toFixed(2)} que se cargará a tu estado de cuenta`;
+  } else if(prev){
+    prev.style.display='none';
+  }
+}
 function clearGasto(){
   ['g-desc','g-monto','g-otros-motivo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const notas=document.getElementById('g-notas');if(notas)notas.value='';
   document.getElementById('g-fecha').value=today();
   document.getElementById('g-tipo-pago').value='';
+  const monedaEl=document.getElementById('g-moneda');
+  if(monedaEl){monedaEl.value='PEN';}
+  const tcWrap=document.getElementById('g-tc-wrap');
+  if(tcWrap){tcWrap.style.display='none';}
+  const prevEl=document.getElementById('g-usd-preview');
+  if(prevEl){prevEl.style.display='none';}
   ['g-diners-extra','g-transp-extra','g-taxi-extra','g-hogar-extra','g-pluxee-extra','g-hormiga-extra'].forEach(id=>{
     const el=document.getElementById(id);if(el){el.style.maxHeight='0';el.style.opacity='0';el.style.display='none';}
   });
@@ -1864,6 +1919,21 @@ async function addGasto(){
     cat=document.getElementById('g-cat').value;
     extra.tipoPago=document.getElementById('g-pago-tipo').value;
     if(extra.tipoPago!=='directo')extra.nCuotas=document.getElementById('g-ncuotas').value;
+    // Moneda: si es USD, guardar monto en soles pero registrar info original
+    const monedaEl=document.getElementById('g-moneda');
+    const moneda=monedaEl?monedaEl.value:'PEN';
+    if(moneda==='USD'){
+      const tc=parseFloat(document.getElementById('g-tc').value)||3.75;
+      const montoUSD=monto; // monto original en dólares
+      monto=parseFloat((montoUSD*tc).toFixed(2)); // convertir a soles
+      extra.moneda='USD';
+      extra.montoOriginal=String(montoUSD);
+      extra.tipoCambio=String(tc);
+      // Guardar último TC para pre-rellenar la próxima vez
+      try{localStorage.setItem('lastTC',String(tc));}catch(e){}
+    } else {
+      extra.moneda='PEN';
+    }
   } else if(gastoTipo==='hogar'){
     const hDepto=document.getElementById('g-hogar-depto').value;
     const hCat=document.getElementById('g-hogar-cat').value;
@@ -2075,11 +2145,18 @@ function renderDinersPeriodo(){
   const pTxs=txs.filter(t=>esDiners(t)&&t.fecha>=pStartStr&&t.fecha<=corteStr);
   const consumo=pTxs.reduce((s,t)=>s+t.amount,0);
   const cuotasT=idx===0?calcCuotasActivasTotal():0;
+  // Desglose por moneda
+  const txSoles=pTxs.filter(t=>t.moneda!=='USD');
+  const txUSD=pTxs.filter(t=>t.moneda==='USD');
+  const consumoSoles=txSoles.reduce((s,t)=>s+t.amount,0);
+  const consumoUSD=txUSD.reduce((s,t)=>s+parseFloat(t.montoOriginal||0),0);
+  const consumoUSDenSoles=txUSD.reduce((s,t)=>s+t.amount,0);
   const total=idx===0?consumo+cuotasT:consumo;
   document.getElementById('dc-tx-title').textContent=`Consumos: ${label}`;
   document.getElementById('dc-hist-cards').innerHTML=`
-    <div class="kcard"><div class="kcard-label">Consumo directo</div><div class="kcard-val" style="color:var(--amber);font-size:18px">${fmt(consumo)}</div><div class="kcard-foot">${pTxs.length} transacciones</div></div>
-    ${idx===0?`<div class="kcard"><div class="kcard-label">Cuotas fijas</div><div class="kcard-val" style="color:var(--purple);font-size:18px">${fmt(cuotasT)}</div><div class="kcard-foot">${cuotas.length} cuota(s)</div></div>`:''}
+    <div class="kcard"><div class="kcard-label">Consumo S/</div><div class="kcard-val" style="color:var(--amber);font-size:18px">${fmt(consumoSoles)}</div><div class="kcard-foot">${txSoles.length} en soles</div></div>
+    ${txUSD.length?`<div class="kcard"><div class="kcard-label">Consumo US$</div><div class="kcard-val" style="color:var(--sky);font-size:18px">US$ ${consumoUSD.toFixed(2)}</div><div class="kcard-foot">≈ ${fmt(consumoUSDenSoles)}</div></div>`:''}
+    ${idx===0?`<div class="kcard"><div class="kcard-label">Cuotas fijas</div><div class="kcard-val" style="color:var(--purple);font-size:18px">${fmt(cuotasT)}</div><div class="kcard-foot">${cuotas.filter(c=>calcCuotasRestantes(c)>0).length} cuota(s)</div></div>`:''}
     <div class="kcard"><div class="kcard-label">Total período</div><div class="kcard-val" style="color:var(--red);font-size:18px">${fmt(total)}</div><div class="kcard-foot">${idx===0?'A pagar antes del 12':'Período cerrado'}</div></div>
   `;
   document.getElementById('dc-tx-list').innerHTML=pTxs.length
@@ -2214,17 +2291,30 @@ function calcPago(){
   else{const p=parseInt(pct)/100;pagoBase=consumo*p+cuotasT;deuda=consumo*(1-p);interes=deuda>0?deuda*rate:0;}
   const pagoMes=pagoBase+interes;
   const pagoF=new Date(corte.getFullYear(),corte.getMonth()+1,12);
+  // Desglose moneda en calcPago
+  const cpTxSoles=pTxs.filter(t=>t.moneda!=='USD');
+  const cpTxUSD=pTxs.filter(t=>t.moneda==='USD');
+  const consumoSolesCP=cpTxSoles.reduce((s,t)=>s+t.amount,0);
+  const consumoUSDcp=cpTxUSD.reduce((s,t)=>s+parseFloat(t.montoOriginal||0),0);
+  const consumoUSDSolesCP=cpTxUSD.reduce((s,t)=>s+t.amount,0);
   const sinInt=cuotas.filter(c=>c.tipo==='sin-int'),conInt=cuotas.filter(c=>c.tipo==='con-int');
   document.getElementById('pay-result').innerHTML=`
     <div class="pay-box">
-      <div class="pay-row"><span class="pay-key">Consumo directo del período</span><span class="pay-val" style="color:var(--amber)">${fmt(consumo)}</span></div>
+      ${consumoSolesCP>0?`<div class="pay-row"><span class="pay-key">🇵🇪 Consumo en soles</span><span class="pay-val" style="color:var(--amber)">${fmt(consumoSolesCP)}</span></div>`:''}
+      ${consumoUSDcp>0?`<div class="pay-row"><span class="pay-key">🇺🇸 Consumo en dólares</span><span class="pay-val" style="color:var(--sky)">US$ ${consumoUSDcp.toFixed(2)} <span style="font-size:11px;color:var(--text3)">(≈ ${fmt(consumoUSDSolesCP)})</span></span></div>`:''}
       ${sinInt.length?`<div class="pay-row"><span class="pay-key">Cuotas sin interés (${sinInt.length})</span><span class="pay-val" style="color:var(--green)">${fmt(sinInt.reduce((s,c)=>s+c.montoCuota,0))}</span></div>`:''}
       ${conInt.length?`<div class="pay-row"><span class="pay-key">Cuotas con interés (${conInt.length})</span><span class="pay-val" style="color:var(--amber)">${fmt(conInt.reduce((s,c)=>s+c.montoCuota,0))}</span></div>`:''}
       ${deuda>0?`<div class="pay-row"><span class="pay-key">Saldo que se financia</span><span class="pay-val" style="color:var(--red)">${fmt(deuda)}</span></div>`:''}
       ${interes>0?`<div class="pay-row"><span class="pay-key">Interés estimado (${config.cardRate||4.5}%)</span><span class="pay-val" style="color:var(--red)">+${fmt(interes)}</span></div>`:''}
       <div class="pay-row"><span class="pay-key">Fecha límite</span><span class="pay-val">${pagoF.toLocaleDateString('es-PE',{day:'numeric',month:'long',year:'numeric'})}</span></div>
     </div>
-    <div class="pay-total-box"><div class="pay-total-lbl">Pagar antes del 12</div><div class="pay-total-val">${fmt(pagoMes)}</div></div>`;
+    ${consumoUSDcp>0?`<div class="pay-box" style="margin-top:8px;background:rgba(14,165,233,0.06);border-color:rgba(14,165,233,0.2)">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Detalle pago en dólares</div>
+      <div class="pay-row"><span class="pay-key">🇺🇸 Pagar en dólares</span><span class="pay-val" style="color:var(--sky)">US$ ${consumoUSDcp.toFixed(2)}</span></div>
+      <div class="pay-row"><span class="pay-key">🇵🇪 Equivalente en soles</span><span class="pay-val">${fmt(consumoUSDSolesCP)}</span></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">⚠️ Diners cobra al TC del día del estado de cuenta</div>
+    </div>`:''}
+    <div class="pay-total-box"><div class="pay-total-lbl">Total a pagar antes del 12</div><div class="pay-total-val">${fmt(pagoMes)}</div></div>`;
 }
 
 // ══════════════════════════════════════════════════════
