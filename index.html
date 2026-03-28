@@ -1907,10 +1907,18 @@ function clearGasto(){
 }
 async function addGasto(){
   const desc=document.getElementById('g-desc').value.trim();
-  const monto=parseFloat(document.getElementById('g-monto').value);
+  let monto=parseFloat(document.getElementById('g-monto').value);
   const fecha=document.getElementById('g-fecha').value||today();
   const notas=document.getElementById('g-notas').value.trim();
   if(!monto||monto<=0){toast('Ingresa un monto válido','warn');return;}
+  // Validar TC si es gasto Diners en dólares
+  if(gastoTipo==='diners'){
+    const monedaCheck=document.getElementById('g-moneda');
+    if(monedaCheck&&monedaCheck.value==='USD'){
+      const tcCheck=parseFloat(document.getElementById('g-tc').value)||0;
+      if(!tcCheck||tcCheck<=0){toast('Ingresa el tipo de cambio','warn');return;}
+    }
+  }
   const btn=document.getElementById('btn-gasto');btn.disabled=true;btn.textContent='Guardando...';
   let cat='',extra={};
   if(gastoTipo==='transporte'){cat='Transporte';extra.transpTipo=document.getElementById('g-transp-tipo').value;}
