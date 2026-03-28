@@ -1004,6 +1004,39 @@ input,select,textarea,button{font-family:var(--font)}
           </div>
         </div>
 
+        <!-- Pagar estado de cuenta -->
+        <div class="panel mb14" id="dc-pago-panel">
+          <div class="panel-head">
+            <div class="panel-title">💵 Pagar estado de cuenta</div>
+          </div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+            Cuando pagues tu Diners, registra el pago aquí. Ese monto <strong style="color:var(--text)">sí se descuenta</strong> de tu saldo disponible en efectivo.
+          </div>
+          <div id="dc-pago-pendiente" style="margin-bottom:14px"></div>
+          <div class="fg">
+            <div class="field">
+              <label>💰 Monto pagado (S/)</label>
+              <div style="position:relative">
+                <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:700;color:var(--text3);pointer-events:none">S/</span>
+                <input type="number" id="dc-pago-monto" placeholder="0.00" step="0.01" min="0" style="padding-left:30px;font-family:var(--mono);font-weight:700">
+              </div>
+            </div>
+            <div class="field">
+              <label>📅 Fecha de pago</label>
+              <input type="date" id="dc-pago-fecha">
+            </div>
+          </div>
+          <div class="fg g1">
+            <div class="field">
+              <label>📋 Notas (opcional)</label>
+              <input type="text" id="dc-pago-notas" placeholder="Ej. Pago total período Mar 26 → Abr 25">
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-blue" onclick="pagarDiners()" id="btn-pagar-diners">✅ Registrar pago</button>
+          </div>
+        </div>
+
         <!-- Selector período Diners -->
         <div class="panel mb14">
           <div class="panel-head"><div class="panel-title">📋 Historial por período</div></div>
@@ -1448,24 +1481,29 @@ function destroyChart(id){ if(charts[id]){charts[id].destroy();delete charts[id]
 // ══════════════════════════════════════════════════════
 // SALDO
 // ══════════════════════════════════════════════════════
+function esSaldoEfectivo(t){
+  // Solo afectan el saldo disponible los movimientos de efectivo real:
+  // - Ingresos
+  // - Gastos en efectivo, transporte, hogar
+  // - Pagos del estado de cuenta Diners (tipo='pago-diners')
+  // NO afectan: diners (crédito), pluxee (alimentación del trabajo)
+  if(t.tipo==='pluxee') return false;
+  if(t.tipo==='diners') return false;
+  if(t.tipo==='taxi' && t.taxiPago==='Diners') return false;
+  return true;
+}
+
 function calcSaldo(ym){
-  const allYMs=[...new Set(txs.map(t=>ymOf(t.fecha)))].sort();
-  // Saldo incluye Diners (se paga mensualmente con efectivo)
-  // Solo excluye Pluxee (recarga automática del trabajo)
   const d=new Date(ym+'-01'); d.setMonth(d.getMonth()-1);
   const prevYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
   const saldoAnt=txs
-    .filter(t=>ymOf(t.fecha)<=prevYM && t.tipo!=='pluxee')
-    .reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount, 0)
-    - cuotas.reduce((s,c)=>{
-        const mesesUsados=allYMs.filter(m=>m<=prevYM).length;
-        return s + Math.min(c.cuotasRestantes,mesesUsados)*c.montoCuota;
-      },0);
-  const mt=txOfYM(ym).filter(t=>t.tipo!=='pluxee');
+    .filter(t=>ymOf(t.fecha)<=prevYM && esSaldoEfectivo(t))
+    .reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount, 0);
+  const mt=txOfYM(ym).filter(esSaldoEfectivo);
   const inc=mt.filter(t=>t.tipo==='ingreso').reduce((s,t)=>s+t.amount,0);
   const exp=mt.filter(t=>t.tipo!=='ingreso').reduce((s,t)=>s+t.amount,0);
   const cuotasT=calcCuotasActivasTotal();
-  return {inc, exp, cuotasT, saldoAnt, balance: saldoAnt+inc-exp-cuotasT};
+  return {inc, exp, cuotasT, saldoAnt, balance: saldoAnt+inc-exp};
 }
 
 function updateSidebar(){
@@ -2038,7 +2076,8 @@ function renderRecent(){
 // EFECTIVO
 // ══════════════════════════════════════════════════════
 function esDiners(t){
-  // Es Diners si: tipo diners, taxi pagado con Diners, o hormiga/hogar pagado con Diners
+  // Es Diners si: tipo diners, taxi pagado con Diners
+  // Los pagos del estado de cuenta (motivo='pago-diners') son efectivo, no consumo Diners
   if(t.tipo==='diners') return true;
   if(t.tipo==='taxi'&&t.taxiPago==='Diners') return true;
   return false;
@@ -2263,6 +2302,27 @@ function renderDiners(){
       <button class="tx-btn del" onclick="deleteCuota(${i})" title="Eliminar">✕</button>
     </div>`;
   }).join(''):'<div class="empty">Sin cuotas fijas registradas</div>';
+  // Panel pago: pre-rellenar fecha y mostrar total pendiente
+  const dcPagoFecha=document.getElementById('dc-pago-fecha');
+  if(dcPagoFecha&&!dcPagoFecha.value) dcPagoFecha.value=today();
+  const dcPagoPendiente=document.getElementById('dc-pago-pendiente');
+  if(dcPagoPendiente){
+    const pendiente=consumed+cuotasT;
+    if(pendiente>0){
+      dcPagoPendiente.innerHTML=`
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:var(--r2);flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Total período actual</div>
+            <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--amber)">${fmt(pendiente)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="document.getElementById('dc-pago-monto').value='${pendiente.toFixed(2)}'">
+            Usar este monto
+          </button>
+        </div>`;
+    } else {
+      dcPagoPendiente.innerHTML='<div style="font-size:13px;color:var(--green)">✅ Sin consumos pendientes en este período.</div>';
+    }
+  }
   // El historial de consumos lo maneja renderDinersPeriodo
   populateDcPeriodos();
   renderDinersPeriodo();
@@ -2335,6 +2395,39 @@ function calcPago(){
       <div style="font-size:11px;color:var(--text3);margin-top:6px">⚠️ Diners cobra al TC del día del estado de cuenta</div>
     </div>`:''}
     <div class="pay-total-box"><div class="pay-total-lbl">Total a pagar antes del 12</div><div class="pay-total-val">${fmt(pagoMes)}</div></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// PAGO DINERS
+// ══════════════════════════════════════════════════════
+async function pagarDiners(){
+  const monto=parseFloat(document.getElementById('dc-pago-monto').value);
+  const fecha=document.getElementById('dc-pago-fecha').value||today();
+  const notas=document.getElementById('dc-pago-notas').value.trim()||'Pago estado de cuenta Diners';
+  if(!monto||monto<=0){toast('Ingresa el monto pagado','warn');return;}
+  const btn=document.getElementById('btn-pagar-diners');
+  btn.disabled=true;btn.textContent='Registrando...';
+  // Se guarda como tipo 'pago-diners' = egreso de efectivo real
+  const tx={
+    id:String(Date.now()),fecha,
+    descripcion:'Pago Diners Club',
+    monto:String(monto),
+    tipo:'efectivo',           // sale del efectivo
+    categoria:'Servicios',
+    motivo:'pago-diners',      // marca para identificarlo
+    notas
+  };
+  try{
+    await api('add',{tx});
+    txs.unshift({...tx,amount:monto});
+    document.getElementById('dc-pago-monto').value='';
+    document.getElementById('dc-pago-notas').value='';
+    toast('✅ Pago registrado — saldo actualizado');
+    renderDiners();
+    updateSidebar();
+  }finally{
+    btn.disabled=false;btn.textContent='✅ Registrar pago';
+  }
 }
 
 // ══════════════════════════════════════════════════════
