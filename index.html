@@ -517,7 +517,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="sb-sub">Gestión personal · 2026</div>
     </div>
     <div class="sb-balance">
-      <div class="sb-bal-label">Saldo disponible</div>
+      <div class="sb-bal-label">Efectivo disponible</div>
       <div class="sb-bal-val" id="sb-val">S/ 0.00</div>
       <div class="sb-bal-foot" id="sb-foot">Este mes</div>
     </div>
@@ -1448,22 +1448,29 @@ function destroyChart(id){ if(charts[id]){charts[id].destroy();delete charts[id]
 // ══════════════════════════════════════════════════════
 // SALDO
 // ══════════════════════════════════════════════════════
+function esSaldoReal(t){
+  // Solo afectan el saldo real: ingresos y gastos en efectivo
+  // Excluidos: pluxee (tarjeta alimentación independiente)
+  //            diners/taxi-diners (tarjeta de crédito, solo impacta cuando pagas el estado de cuenta)
+  if(t.tipo==='pluxee') return false;
+  if(t.tipo==='diners') return false;
+  if(t.tipo==='taxi'&&t.taxiPago==='Diners') return false;
+  return true;
+}
+
 function calcSaldo(ym){
-  const allYMs=[...new Set(txs.map(t=>ymOf(t.fecha)))].sort();
-  // saldo anterior = todo lo acumulado hasta el mes previo
-  // EXCLUYE pluxee: es un saldo independiente, no afecta el saldo general
+  // saldo anterior = acumulado hasta el mes previo (solo movimientos reales de efectivo)
   const d=new Date(ym+'-01'); d.setMonth(d.getMonth()-1);
   const prevYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-  const saldoAnt=txs.filter(t=>ymOf(t.fecha)<=prevYM&&t.tipo!=='pluxee').reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount,0)
-    - cuotas.reduce((s,c)=>{
-        const mesesUsados=allYMs.filter(m=>m<=prevYM).length;
-        return s + Math.min(c.cuotasRestantes,mesesUsados)*c.montoCuota;
-      },0);
-  const mt=txOfYM(ym).filter(t=>t.tipo!=='pluxee'); // Pluxee no afecta el saldo general
+  const saldoAnt=txs
+    .filter(t=>ymOf(t.fecha)<=prevYM && esSaldoReal(t))
+    .reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount, 0);
+  const mt=txOfYM(ym).filter(esSaldoReal);
   const inc=mt.filter(t=>t.tipo==='ingreso').reduce((s,t)=>s+t.amount,0);
   const exp=mt.filter(t=>t.tipo!=='ingreso').reduce((s,t)=>s+t.amount,0);
-  const cuotasT=calcCuotasActivasTotal();
-  return {inc, exp, cuotasT, saldoAnt, balance: saldoAnt+inc-exp-cuotasT};
+  // cuotasT ya no se resta del saldo disponible: Diners es crédito, no cash
+  const cuotasT=calcCuotasActivasTotal(); // lo mantenemos para presupuesto/dashboard
+  return {inc, exp, cuotasT, saldoAnt, balance: saldoAnt+inc-exp};
 }
 
 function updateSidebar(){
@@ -1471,7 +1478,7 @@ function updateSidebar(){
   const el=document.getElementById('sb-val');
   el.textContent=fmt(balance);
   el.className='sb-bal-val '+(balance>=0?'pos':'neg');
-  document.getElementById('sb-foot').textContent=balance>=0?'Disponible este mes':'⚠️ En déficit';
+  document.getElementById('sb-foot').textContent=balance>=0?'Efectivo disponible':'⚠️ En déficit';
   // Sincronizar saldo en drawer móvil
   const mobS=document.getElementById('mob-saldo');
   if(mobS){mobS.textContent=fmt(balance);mobS.style.color=balance>=0?'var(--green)':'var(--red)';}
@@ -1689,15 +1696,25 @@ function renderDashboard(){
   const def=document.getElementById('dash-deficit');
   def.innerHTML=balance<0?`<div class="alert-box ab-danger" style="margin-bottom:14px"><span class="alert-ico">🚨</span><strong>Déficit de ${fmt(Math.abs(balance))}.</strong> Tus gastos superan tus ingresos disponibles este mes.</div>`:'';
 
+  // Diners: consumo del período actual (26-25)
+  const now=new Date();
+  let dcorte=new Date(now.getFullYear(),now.getMonth(),25);
+  if(now.getDate()>25)dcorte=new Date(now.getFullYear(),now.getMonth()+1,25);
+  const dpStart=new Date(dcorte.getFullYear(),dcorte.getMonth()-1,26);
+  const dpStartStr=dpStart.getFullYear()+'-'+String(dpStart.getMonth()+1).padStart(2,'0')+'-26';
+  const dcorteStr=dcorte.getFullYear()+'-'+String(dcorte.getMonth()+1).padStart(2,'0')+'-25';
+  const dinPeriodo=txs.filter(t=>esDiners(t)&&t.fecha>=dpStartStr&&t.fecha<=dcorteStr).reduce((s,t)=>s+t.amount,0)+cuotasT;
+  const daysLeft=daysUntilPago();
+
   document.getElementById('dash-cards').innerHTML=`
     <div class="kcard"><div class="kcard-label">Ingresos del mes</div><div class="kcard-val" style="color:var(--green)">${fmt(inc)}</div><div class="kcard-foot">Registrado este mes</div></div>
     <div class="kcard"><div class="kcard-label">Saldo anterior</div><div class="kcard-val" style="color:${saldoAnt>=0?'var(--green)':'var(--red)'}">${fmt(saldoAnt)}</div><div class="kcard-foot">Arrastre del mes previo</div></div>
-    <div class="kcard"><div class="kcard-label">Efectivo</div><div class="kcard-val" style="color:var(--text)">${fmt(efTotal)}</div><div class="kcard-foot">Gastos en efectivo</div></div>
-    <div class="kcard"><div class="kcard-label">Diners Club</div><div class="kcard-val" style="color:var(--amber)">${fmt(dinTotal)}</div><div class="kcard-foot">Consumos + cuotas</div></div>
+    <div class="kcard"><div class="kcard-label">Efectivo gastado</div><div class="kcard-val" style="color:var(--red)">${fmt(efTotal)}</div><div class="kcard-foot">Salida real de dinero</div></div>
+    <div class="kcard"><div class="kcard-label">💳 Diners — período</div><div class="kcard-val" style="color:var(--amber)">${fmt(dinPeriodo)}</div><div class="kcard-foot">A pagar en ${daysLeft} días</div></div>
     <div class="kcard"><div class="kcard-label">Movilidad</div><div class="kcard-val" style="color:var(--teal)">${fmt(mobTotal)}</div><div class="kcard-foot">Transporte + taxis</div></div>
     <div class="kcard"><div class="kcard-label">Tecnología</div><div class="kcard-val" style="color:var(--sky)">${fmt(tecTotal)}</div><div class="kcard-foot">Gadgets y suscripciones</div></div>
-    <div class="kcard"><div class="kcard-label">Pluxee</div><div class="kcard-val" style="color:#22c55e">${fmt(calcPluxeeSaldo())}</div><div class="kcard-foot">Saldo disponible</div></div>
-    <div class="kcard"><div class="kcard-label">Balance neto</div><div class="kcard-val" style="color:${balance>=0?'var(--green)':'var(--red)'}">${fmt(balance)}</div><div class="kcard-foot">${balance>=0?'Disponible':'Déficit'}</div></div>
+    <div class="kcard"><div class="kcard-label">🍽 Pluxee</div><div class="kcard-val" style="color:#22c55e">${fmt(calcPluxeeSaldo())}</div><div class="kcard-foot">Saldo alimentación</div></div>
+    <div class="kcard" style="border-color:${balance>=0?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)'}"><div class="kcard-label">💵 Efectivo disponible</div><div class="kcard-val" style="color:${balance>=0?'var(--green)':'var(--red)'}; font-size:22px">${fmt(balance)}</div><div class="kcard-foot">${balance>=0?'Saldo en efectivo':'⚠️ En déficit'}</div></div>
   `;
 
   // cat bars
@@ -1711,9 +1728,9 @@ function renderDashboard(){
 
   // alerts
   const dL=daysUntilPago();const alerts=[];
-  if(dinTotal>0)alerts.push({t:dL<=5?'ab-danger':'ab-warn',i:'💳',m:`Diners: ${fmt(dinTotal)} a pagar. Vence en ${dL} días (día 12).`});
-  if(balance<0)alerts.push({t:'ab-danger',i:'🚨',m:`Déficit: gastas ${fmt(Math.abs(balance))} más de lo que tienes.`});
-  else if(balance<300)alerts.push({t:'ab-warn',i:'⚡',m:`Balance bajo: solo quedan ${fmt(balance)}.`});
+  if(dinPeriodo>0)alerts.push({t:daysLeft<=5?'ab-danger':'ab-warn',i:'💳',m:`Diners: ${fmt(dinPeriodo)} a pagar. Vence el día 12 (${daysLeft} días).`});
+  if(balance<0)alerts.push({t:'ab-danger',i:'🚨',m:`Déficit en efectivo: ingresas ${fmt(inc)} pero gastas ${fmt(efTotal)} en cash.`});
+  else if(balance<300)alerts.push({t:'ab-warn',i:'⚡',m:`Efectivo bajo: solo quedan ${fmt(balance)} disponibles.`});
   if(saldoAnt>0)alerts.push({t:'ab-info',i:'➕',m:`Tienes ${fmt(saldoAnt)} de saldo arrastrado del mes anterior.`});
   // budget alerts
   Object.entries(presupuesto).forEach(([cat,lim])=>{
