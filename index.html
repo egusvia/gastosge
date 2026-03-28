@@ -517,7 +517,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="sb-sub">Gestión personal · 2026</div>
     </div>
     <div class="sb-balance">
-      <div class="sb-bal-label">Efectivo disponible</div>
+      <div class="sb-bal-label">Saldo disponible</div>
       <div class="sb-bal-val" id="sb-val">S/ 0.00</div>
       <div class="sb-bal-foot" id="sb-foot">Este mes</div>
     </div>
@@ -1448,29 +1448,24 @@ function destroyChart(id){ if(charts[id]){charts[id].destroy();delete charts[id]
 // ══════════════════════════════════════════════════════
 // SALDO
 // ══════════════════════════════════════════════════════
-function esSaldoReal(t){
-  // Solo afectan el saldo real: ingresos y gastos en efectivo
-  // Excluidos: pluxee (tarjeta alimentación independiente)
-  //            diners/taxi-diners (tarjeta de crédito, solo impacta cuando pagas el estado de cuenta)
-  if(t.tipo==='pluxee') return false;
-  if(t.tipo==='diners') return false;
-  if(t.tipo==='taxi'&&t.taxiPago==='Diners') return false;
-  return true;
-}
-
 function calcSaldo(ym){
-  // saldo anterior = acumulado hasta el mes previo (solo movimientos reales de efectivo)
+  const allYMs=[...new Set(txs.map(t=>ymOf(t.fecha)))].sort();
+  // Saldo incluye Diners (se paga mensualmente con efectivo)
+  // Solo excluye Pluxee (recarga automática del trabajo)
   const d=new Date(ym+'-01'); d.setMonth(d.getMonth()-1);
   const prevYM=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
   const saldoAnt=txs
-    .filter(t=>ymOf(t.fecha)<=prevYM && esSaldoReal(t))
-    .reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount, 0);
-  const mt=txOfYM(ym).filter(esSaldoReal);
+    .filter(t=>ymOf(t.fecha)<=prevYM && t.tipo!=='pluxee')
+    .reduce((s,t)=>t.tipo==='ingreso'?s+t.amount:s-t.amount, 0)
+    - cuotas.reduce((s,c)=>{
+        const mesesUsados=allYMs.filter(m=>m<=prevYM).length;
+        return s + Math.min(c.cuotasRestantes,mesesUsados)*c.montoCuota;
+      },0);
+  const mt=txOfYM(ym).filter(t=>t.tipo!=='pluxee');
   const inc=mt.filter(t=>t.tipo==='ingreso').reduce((s,t)=>s+t.amount,0);
   const exp=mt.filter(t=>t.tipo!=='ingreso').reduce((s,t)=>s+t.amount,0);
-  // cuotasT ya no se resta del saldo disponible: Diners es crédito, no cash
-  const cuotasT=calcCuotasActivasTotal(); // lo mantenemos para presupuesto/dashboard
-  return {inc, exp, cuotasT, saldoAnt, balance: saldoAnt+inc-exp};
+  const cuotasT=calcCuotasActivasTotal();
+  return {inc, exp, cuotasT, saldoAnt, balance: saldoAnt+inc-exp-cuotasT};
 }
 
 function updateSidebar(){
@@ -1478,7 +1473,7 @@ function updateSidebar(){
   const el=document.getElementById('sb-val');
   el.textContent=fmt(balance);
   el.className='sb-bal-val '+(balance>=0?'pos':'neg');
-  document.getElementById('sb-foot').textContent=balance>=0?'Efectivo disponible':'⚠️ En déficit';
+  document.getElementById('sb-foot').textContent=balance>=0?'Disponible este mes':'⚠️ En déficit';
   // Sincronizar saldo en drawer móvil
   const mobS=document.getElementById('mob-saldo');
   if(mobS){mobS.textContent=fmt(balance);mobS.style.color=balance>=0?'var(--green)':'var(--red)';}
