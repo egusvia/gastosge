@@ -1328,30 +1328,50 @@ input,select,textarea,button{font-family:var(--font)}
       <!-- ═══ GASTOS HORMIGA ═══ -->
       <div class="page" id="page-recurrentes">
         <div class="page-header">
-          <div class="page-title">🐜 Gastos Hormiga</div>
-          <div class="page-sub">Administra tus gastos fijos recurrentes</div>
+          <div class="page-title">🐜 Recurrentes</div>
+          <div class="page-sub">Gastos hormiga y pagos fijos del mes</div>
         </div>
         <div class="alert-box ab-info mb14">
           <span class="alert-ico">ℹ️</span>
-          <span>Para <strong>agregar un gasto hormiga</strong>, al registrar cualquier gasto marca el checkbox <strong>🔄 Guardar como recurrente</strong>. Desde aquí puedes pausarlos o eliminarlos.</span>
+          <span><strong>Gastos hormiga</strong> = suscripciones y apps pequeñas (Spotify, Netflix, Claude Pro). Se registran automáticamente. <strong>Pagos fijos</strong> = alquileres, servicios grandes — los registras manualmente cuando los pagas.</span>
+        </div>
+        <!-- Panel eliminar txs incorrectas del mes -->
+        <div class="panel mb14" id="rec-fix-panel">
+          <div class="panel-head"><div class="panel-title" style="color:var(--amber)">🧹 Transacciones registradas por error este mes</div></div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+            Si el botón de registro automático incluyó pagos fijos por error (alquileres, etc.), búscalos en el <strong>Historial</strong> y elimínalos desde ahí con el botón ✕. También puedes ir a <strong>Efectivo → Registros del período</strong> para verlos y borrarlos.
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="go('historial')">📋 Ir al historial para limpiar</button>
         </div>
         <!-- KPIs -->
         <div class="cards" id="rec-cards"></div>
-        <!-- Acción manual -->
+
+        <!-- Registro automático solo hormiga -->
         <div class="panel mb14">
-          <div class="panel-head">
-            <div class="panel-title">Registro mensual</div>
-          </div>
+          <div class="panel-head"><div class="panel-title">🐜 Registro automático — Gastos hormiga</div></div>
           <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
-            Presiona el botón para registrar todos los gastos hormiga activos del mes actual. Solo registra los que aún no fueron registrados este mes.
+            Registra solo los gastos hormiga activos (suscripciones y apps). Los pagos fijos como alquileres <strong style="color:var(--text)">no</strong> se incluyen aquí — esos los registras tú manualmente cuando los pagas.
           </div>
           <div id="rec-registro-status"></div>
+          <div class="alert-box ab-warn" style="margin-bottom:10px">
+            <span class="alert-ico">⚠️</span>
+            <span>Solo registra gastos hormiga (suscripciones y apps). Los alquileres y pagos grandes los debes registrar <strong>manualmente</strong> cuando los pagues.</span>
+          </div>
           <button class="btn btn-blue" onclick="registrarHormigasMes()">🔄 Registrar gastos hormiga de este mes</button>
         </div>
-        <!-- Lista -->
+
+        <!-- Lista separada -->
+        <div class="panel mb14">
+          <div class="panel-head">
+            <div class="panel-title">🐜 Gastos hormiga <span style="font-size:10px;color:var(--text3)">(suscripciones y apps)</span></div>
+          </div>
+          <div id="rec-list-hormiga"></div>
+        </div>
         <div class="panel">
-          <div class="panel-head"><div class="panel-title">Mis gastos hormiga</div></div>
-          <div id="rec-list"></div>
+          <div class="panel-head">
+            <div class="panel-title">📋 Pagos fijos <span style="font-size:10px;color:var(--text3)">(alquileres, servicios grandes)</span></div>
+          </div>
+          <div id="rec-list-fijos"></div>
         </div>
       </div>
 
@@ -2935,33 +2955,56 @@ async function registrarHormigasMes(){
     setTimeout(()=>{status.innerHTML='';},5000);
   }
 }
-function renderRecurrentes(){
-  const totalMes=recurrentes.filter(r=>r.activo==='true').reduce((s,r)=>s+parseFloat(r.monto||0),0);
-  const totalEf=recurrentes.filter(r=>r.activo==='true'&&r.medioPago==='efectivo').reduce((s,r)=>s+parseFloat(r.monto||0),0);
-  const totalDin=recurrentes.filter(r=>r.activo==='true'&&r.medioPago==='diners').reduce((s,r)=>s+parseFloat(r.monto||0),0);
-  document.getElementById('rec-cards').innerHTML=`
-    <div class="kcard"><div class="kcard-label">Costo mensual total</div><div class="kcard-val" style="color:var(--purple)">${fmt(totalMes)}</div><div class="kcard-foot">${recurrentes.filter(r=>r.activo==='true').length} gastos hormiga activos</div></div>
-    <div class="kcard"><div class="kcard-label">En efectivo</div><div class="kcard-val" style="color:var(--green)">${fmt(totalEf)}</div><div class="kcard-foot">Pagados en efectivo</div></div>
-    <div class="kcard"><div class="kcard-label">Con Diners</div><div class="kcard-val" style="color:var(--amber)">${fmt(totalDin)}</div><div class="kcard-foot">Cargados a tarjeta</div></div>
-    <div class="kcard"><div class="kcard-label">Costo anual</div><div class="kcard-val" style="color:var(--text);font-size:16px">${fmt(totalMes*12)}</div><div class="kcard-foot">Proyección anual</div></div>
-  `;
+function esHormiga(r){
+  // Es gasto hormiga si: monto pequeño (<= 100 soles) O categoría es Entretenimiento/Tecnología/Servicios
+  // Y NO es alquiler ni servicios básicos (pagos fijos grandes)
+  const m=parseFloat(r.monto||0);
+  const cat=r.categoria||'';
+  if(cat==='Alquiler'||cat==='Servicios básicos'||cat==='Hogar') return false;
+  if(m>200) return false; // montos grandes = pago fijo, no hormiga
+  return true;
+}
+
+function recItemHTML(r){
   const medioIcon={efectivo:'💵',diners:'💳'};
-  const catIcon=CAT_ICON;
-  document.getElementById('rec-list').innerHTML=recurrentes.length
-    ?recurrentes.map(r=>`
-      <div class="rec-item">
-        <div class="rec-ico">${catIcon[r.categoria]||'📦'}</div>
-        <div class="rec-body">
-          <div class="rec-name">${r.nombre}</div>
-          <div class="rec-meta">${medioIcon[r.medioPago]||'💵'} ${r.medioPago==='diners'?'Diners':'Efectivo'} · Día ${r.diaCobro} · ${r.categoria}${r.ultimoRegistro?' · último: '+r.ultimoRegistro:''}</div>
-        </div>
-        <div class="rec-amt">${fmt(parseFloat(r.monto||0))}</div>
-        <div class="rec-actions">
-          <button class="toggle-btn ${r.activo==='true'?'toggle-on':'toggle-off'}" onclick="toggleRecurrente('${r.id}')">${r.activo==='true'?'Activo':'Pausado'}</button>
-          <button class="tx-btn del" onclick="deleteRec('${r.id}')">✕</button>
-        </div>
-      </div>`).join('')
-    :'<div class="empty">No hay gastos hormiga. Usa el botón <strong>+ Nuevo</strong> para agregar uno.</div>';
+  const esH=esHormiga(r);
+  return `<div class="rec-item">
+    <div class="rec-ico">${CAT_ICON[r.categoria]||'📦'}</div>
+    <div class="rec-body">
+      <div class="rec-name">${r.nombre} ${r.activo!=='true'?'<span class="tag tag-red">Pausado</span>':''}</div>
+      <div class="rec-meta">${medioIcon[r.medioPago]||'💵'} ${r.medioPago==='diners'?'Diners':'Efectivo'} · Día ${r.diaCobro} · ${r.categoria}${r.ultimoRegistro?' · último: '+r.ultimoRegistro:''}</div>
+    </div>
+    <div class="rec-amt">${fmt(parseFloat(r.monto||0))}</div>
+    <div class="rec-actions">
+      <button class="toggle-btn ${r.activo==='true'?'toggle-on':'toggle-off'}" onclick="toggleRecurrente('${r.id}')">${r.activo==='true'?'Activo':'Pausado'}</button>
+      <button class="tx-btn del" onclick="deleteRec('${r.id}')">✕</button>
+    </div>
+  </div>`;
+}
+
+function renderRecurrentes(){
+  const activos=recurrentes.filter(r=>r.activo==='true');
+  const hormigas=recurrentes.filter(esHormiga);
+  const fijos=recurrentes.filter(r=>!esHormiga(r));
+  const totalHormiga=hormigas.filter(r=>r.activo==='true').reduce((s,r)=>s+parseFloat(r.monto||0),0);
+  const totalFijos=fijos.filter(r=>r.activo==='true').reduce((s,r)=>s+parseFloat(r.monto||0),0);
+  const totalDin=activos.filter(r=>r.medioPago==='diners').reduce((s,r)=>s+parseFloat(r.monto||0),0);
+
+  document.getElementById('rec-cards').innerHTML=`
+    <div class="kcard"><div class="kcard-label">🐜 Gastos hormiga</div><div class="kcard-val" style="color:var(--purple)">${fmt(totalHormiga)}</div><div class="kcard-foot">${hormigas.filter(r=>r.activo==='true').length} activos · se auto-registran</div></div>
+    <div class="kcard"><div class="kcard-label">📋 Pagos fijos</div><div class="kcard-val" style="color:var(--amber)">${fmt(totalFijos)}</div><div class="kcard-foot">${fijos.filter(r=>r.activo==='true').length} activos · registro manual</div></div>
+    <div class="kcard"><div class="kcard-label">Con Diners</div><div class="kcard-val" style="color:var(--amber)">${fmt(totalDin)}</div><div class="kcard-foot">Cargados a tarjeta</div></div>
+    <div class="kcard"><div class="kcard-label">Total mensual</div><div class="kcard-val" style="color:var(--text);font-size:16px">${fmt(totalHormiga+totalFijos)}</div><div class="kcard-foot">Hormiga + pagos fijos</div></div>
+  `;
+
+  const listH=document.getElementById('rec-list-hormiga');
+  const listF=document.getElementById('rec-list-fijos');
+  if(listH) listH.innerHTML=hormigas.length
+    ?hormigas.map(recItemHTML).join('')
+    :'<div class="empty">Sin gastos hormiga registrados.</div>';
+  if(listF) listF.innerHTML=fijos.length
+    ?fijos.map(recItemHTML).join('')
+    :'<div class="empty">Sin pagos fijos registrados.</div>';
 }
 
 async function addRecurrente(){
