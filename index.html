@@ -586,6 +586,23 @@ input,select,textarea,button{font-family:var(--font)}
           <div class="page-title">Ingresos</div>
           <div class="page-sub">Registra tu sueldo, ventas y otros ingresos</div>
         </div>
+
+        <!-- PANEL IMPORTAR DESDE PLIN/INTERBANK -->
+        <div class="panel mb14" style="border-color:rgba(59,130,246,0.3)">
+          <div class="panel-head">
+            <div class="panel-title">📧 Importar pagos Plin desde Gmail</div>
+            <button class="btn btn-blue btn-sm" id="btn-import-plin" onclick="importarCorreos('plin')">🔍 Buscar correos Plin</button>
+          </div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+            Busca desde la última consulta para evitar duplicados. Revisa cada pago, edita el motivo si quieres, y confirma con un clic.
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:12px">
+            🕐 Última búsqueda Plin: <span id="plin-last-check">nunca</span>
+          </div>
+          <div id="plin-import-status"></div>
+          <div id="plin-import-list"></div>
+        </div>
+
         <div class="panel mb14">
           <div class="panel-head"><div class="panel-title">Nuevo ingreso</div></div>
           <div class="fg">
@@ -1002,6 +1019,22 @@ input,select,textarea,button{font-family:var(--font)}
               <button class="btn btn-ghost btn-sm" onclick="toggleCuotaForm()">Cancelar</button>
             </div>
           </div>
+        </div>
+
+        <!-- PANEL IMPORTAR DINERS DESDE GMAIL -->
+        <div class="panel mb14" style="border-color:rgba(245,158,11,0.3)">
+          <div class="panel-head">
+            <div class="panel-title">📧 Importar consumos Diners desde Gmail</div>
+            <button class="btn btn-blue btn-sm" id="btn-import-diners" onclick="importarCorreos('diners')">🔍 Buscar correos</button>
+          </div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+            Detecta consumos de <strong style="color:var(--amber)">Diners Club</strong> desde tu correo. Busca desde la última consulta para evitar duplicados.
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:12px">
+            🕐 Última búsqueda Diners: <span id="diners-last-check">nunca</span>
+          </div>
+          <div id="diners-import-status"></div>
+          <div id="diners-import-list"></div>
         </div>
 
         <!-- Pagar estado de cuenta -->
@@ -1640,6 +1673,9 @@ async function loadAll(){
     await reconciliarCuotas(); // Descuenta/elimina cuotas completadas automáticamente
     renderPage(document.querySelector('.page.active').id.replace('page-',''));
     updateSidebar();
+    // Actualizar labels de última búsqueda en correos
+    updateLastCheckLabel('plin');
+    updateLastCheckLabel('diners');
   }catch(e){
     document.getElementById('loader').innerHTML=`<div style="text-align:center;padding:2rem;max-width:400px"><div style="font-size:36px;margin-bottom:1rem">⚠️</div><div style="font-size:16px;color:#ef4444;font-weight:600">Error de conexión</div><div style="font-size:13px;color:#5a6280;margin:12px 0;line-height:1.6">Verifica que el Apps Script esté publicado con acceso: <em>Cualquier persona</em>.</div><button onclick="loadAll()" style="padding:9px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">↺ Reintentar</button></div>`;
   }
@@ -1732,6 +1768,149 @@ async function deleteTx(id){
   renderPage(document.querySelector('.page.active').id.replace('page-',''));
 }
 
+// ══════════════════════════════════════════════════════
+// IMPORTAR CORREOS (PLIN + DINERS) DESDE GMAIL
+// ══════════════════════════════════════════════════════
+
+function getLastCheck(tipo){try{return localStorage.getItem('lastCheck_'+tipo)||'';}catch(e){return '';}}
+function setLastCheck(tipo,f){try{localStorage.setItem('lastCheck_'+tipo,f);}catch(e){}}
+function updateLastCheckLabel(tipo){
+  const el=document.getElementById(tipo+'-last-check');
+  if(el)el.textContent=getLastCheck(tipo)||'nunca';
+}
+function getRegistradosIds(tipo){
+  const key=tipo+'-';
+  return new Set(txs.filter(t=>t.motivo&&t.motivo.startsWith(key)).map(t=>t.motivo.replace(key,'')));
+}
+
+async function importarCorreos(tipo){
+  const btnId=tipo==='plin'?'btn-import-plin':'btn-import-diners';
+  const btn=document.getElementById(btnId);
+  const status=document.getElementById(tipo+'-import-status');
+  const list=document.getElementById(tipo+'-import-list');
+  btn.disabled=true; btn.textContent='⏳ Buscando...';
+  status.innerHTML='<div class="alert-box ab-info"><span class="alert-ico">⏳</span><span>Leyendo correos desde Gmail...</span></div>';
+  list.innerHTML='';
+  updateLastCheckLabel(tipo);
+
+  let desdeDate=getLastCheck(tipo);
+  if(!desdeDate){const d=new Date();d.setDate(d.getDate()-30);desdeDate=d.toISOString().slice(0,10);}
+  const afterGmail=desdeDate.replace(/-/g,'/');
+  const hoy=new Date().toISOString().slice(0,10);
+  const yaRegistrados=getRegistradosIds(tipo);
+
+  const query=tipo==='plin'
+    ?`from:servicioalcliente@netinterbank.com.pe subject:"Constancia de Pago Plin" after:${afterGmail}`
+    :`from:avisos@dinersenlinea.pe after:${afterGmail}`;
+
+  const sysPlin=`Extrae datos de correos de Plin/Interbank. Formato del correo:
+"Constancia de Pago Plin [FECHA] Código de operación: [ID] Destinatario: [NOMBRE] Destino: [Yape/Plin] Moneda y monto: S/ [MONTO]"
+Convierte fechas: "01 Abr 2026" → "2026-04-01".
+Responde SOLO JSON sin markdown: {"registros":[{"id":"OPERACION_ID","fecha":"YYYY-MM-DD","monto":0.00,"descripcion":"NOMBRE → Destino","moneda":"PEN"}]}`;
+
+  const sysDiners=`Extrae datos de correos de Diners Club Perú. Formato:
+"Le informamos que usted realizó un consumo el DD/MM/YYYY a las HH:MM:SS horas en el comercio NOMBRE por un importe de S/ MONTO" (o $ MONTO para dólares).
+El ID único = fecha+hora sin espacios ni símbolos (ej: "20260329124109").
+Responde SOLO JSON sin markdown: {"registros":[{"id":"ID","fecha":"YYYY-MM-DD","hora":"HH:MM","monto":0.00,"descripcion":"NOMBRE COMERCIO","moneda":"PEN"}]}
+Para dólares usa moneda:"USD".`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:4000,
+        system:tipo==='plin'?sysPlin:sysDiners,
+        messages:[{role:'user',content:`Busca en Gmail con esta query: "${query}" y extrae todos los registros. Devuelve el JSON.`}],
+        mcp_servers:[{type:'url',url:'https://gmail.mcp.claude.com/mcp',name:'gmail-mcp'}]
+      })
+    });
+    const data=await resp.json();
+    const texto=data.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'{"registros":[]}';
+    let parsed;
+    try{parsed=JSON.parse(texto.replace(/```json|```/g,'').trim());}catch(e){parsed={registros:[]};}
+    const nuevos=(parsed.registros||[]).filter(r=>!yaRegistrados.has(String(r.id)));
+
+    if(!nuevos.length){
+      status.innerHTML=`<div class="alert-box ab-ok"><span class="alert-ico">✅</span><span>No hay registros nuevos desde ${desdeDate}.</span></div>`;
+    } else {
+      status.innerHTML=`<div class="alert-box ab-info"><span class="alert-ico">📧</span><span>${nuevos.length} nuevo(s) desde ${desdeDate}. Revisa, edita el motivo y confirma.</span></div>`;
+      list.innerHTML=nuevos.map((r,i)=>{
+        const isUSD=r.moneda==='USD';
+        return `<div id="imp-row-${tipo}-${i}" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r2);padding:13px 15px;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+            <div>
+              <div style="font-size:13px;font-weight:600">${tipo==='plin'?'💸':'💳'} ${r.descripcion}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">📅 ${r.fecha}${r.hora?' · '+r.hora:''} · ID: ${r.id}</div>
+            </div>
+            <span style="font-size:16px;font-weight:700;font-family:var(--mono);color:${isUSD?'var(--sky)':'var(--red)'};white-space:nowrap">
+              ${isUSD?'US$ ':'S/ '}${Number(r.monto).toFixed(2)}${isUSD?' 🇺🇸':''}
+            </span>
+          </div>
+          <div style="margin-bottom:${isUSD?'8':'10'}px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">📋 Motivo (editable)</label>
+            <input type="text" id="imp-motivo-${tipo}-${i}" value="${r.descripcion}"
+              style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:13px;font-family:var(--font);outline:none">
+          </div>
+          ${isUSD?`<div style="margin-bottom:10px">
+            <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">💱 Tipo de cambio</label>
+            <input type="number" id="imp-tc-${tipo}-${i}" value="${localStorage.getItem('lastTC')||'3.75'}" step="0.001" style="width:130px;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 11px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none">
+          </div>`:''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-blue btn-sm" onclick="confirmarImport('${tipo}',${i},'${r.id}','${r.fecha}',${r.monto},'${r.moneda||'PEN'}')">✅ Registrar</button>
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('imp-row-${tipo}-${i}').remove()">🗑 Ignorar / ya registrado</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    setLastCheck(tipo,hoy);
+    updateLastCheckLabel(tipo);
+  }catch(e){
+    status.innerHTML=`<div class="alert-box ab-danger"><span class="alert-ico">❌</span><span>Error: ${e.message}</span></div>`;
+  }finally{
+    btn.disabled=false;
+    btn.textContent=tipo==='plin'?'🔍 Buscar correos Plin':'🔍 Buscar correos';
+  }
+}
+
+async function confirmarImport(tipo,idx,id,fecha,monto,moneda){
+  const btn=event.target;
+  btn.disabled=true; btn.textContent='⏳';
+  const motivo=document.getElementById(`imp-motivo-${tipo}-${idx}`).value.trim();
+  let montoFinal=parseFloat(monto);
+  let extraData={};
+  if(moneda==='USD'){
+    const tc=parseFloat(document.getElementById(`imp-tc-${tipo}-${idx}`)?.value)||3.75;
+    montoFinal=parseFloat((monto*tc).toFixed(2));
+    extraData={moneda:'USD',montoOriginal:String(monto),tipoCambio:String(tc)};
+    try{localStorage.setItem('lastTC',String(tc));}catch(e){}
+  }
+  const tx={
+    id:String(Date.now()),fecha,
+    descripcion:motivo,
+    monto:String(montoFinal),
+    tipo:tipo==='plin'?'efectivo':'diners',
+    categoria:tipo==='plin'?'Otros':'Otros',
+    motivo:`${tipo}-${id}`,
+    notas:`Importado Gmail${moneda==='USD'?' · US$ '+monto+' TC '+extraData.tipoCambio:''}`,
+    ...extraData
+  };
+  try{
+    await api('add',{tx});
+    txs.unshift({...tx,amount:montoFinal});
+    document.getElementById(`imp-row-${tipo}-${idx}`).innerHTML=`
+      <div style="padding:10px;text-align:center;font-size:13px;color:var(--green)">
+        ✅ ${motivo} · ${moneda==='USD'?'US$ '+monto+' = ':''}S/ ${montoFinal.toFixed(2)} registrado
+      </div>`;
+    updateSidebar();
+    if(tipo==='diners')renderDiners();
+    toast(`✅ ${tipo==='plin'?'Pago Plin':'Consumo Diners'} registrado`);
+  }catch(e){
+    btn.disabled=false; btn.textContent='✅ Registrar';
+    toast('Error: '+e.message,'warn');
+  }
+}
 // ══════════════════════════════════════════════════════
 // DASHBOARD
 // ══════════════════════════════════════════════════════
