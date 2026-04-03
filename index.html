@@ -483,19 +483,31 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="field"><label>Fecha</label><input type="date" id="ed-fecha"></div>
       <div class="field"><label>Categoría</label>
         <select id="ed-cat">
-          <option value="Almuerzo">Almuerzo</option>
-          <option value="Mercado">Mercado</option>
-          <option value="Salida">Salida</option>
-          <option value="Transporte">Transporte</option>
-          <option value="Salud">Salud</option>
-          <option value="Educación">Educación</option>
-          <option value="Ropa">Ropa</option>
-          <option value="Servicios">Servicios</option>
-          <option value="Tecnología">Tecnología</option>
-          <option value="Entretenimiento">Entretenimiento</option>
-          <option value="Hogar">Hogar</option>
-          <option value="Otros">Otros</option>
-          <option value="Ingreso">Ingreso</option>
+          <optgroup label="🚗 Movilidad">
+            <option value="Transporte público">Transporte público</option>
+            <option value="Metropolitano">Metropolitano</option>
+            <option value="Taxi">Taxi</option>
+            <option value="Gasolina">Gasolina</option>
+            <option value="Bus">Bus</option>
+          </optgroup>
+          <optgroup label="🍽 Comida">
+            <option value="Desayuno">Desayuno</option>
+            <option value="Almuerzo">Almuerzo</option>
+            <option value="Cena">Cena</option>
+            <option value="Mercado">Mercado</option>
+          </optgroup>
+          <optgroup label="── Otras ──">
+            <option value="Salida">Salida</option>
+            <option value="Tecnología">Tecnología</option>
+            <option value="Salud">Salud</option>
+            <option value="Educación">Educación</option>
+            <option value="Ropa">Ropa</option>
+            <option value="Servicios">Servicios</option>
+            <option value="Hogar">Hogar</option>
+            <option value="Entretenimiento">Entretenimiento</option>
+            <option value="Otros">Otros</option>
+            <option value="Ingreso">Ingreso</option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -525,6 +537,7 @@ input,select,textarea,button{font-family:var(--font)}
       <div class="nav-group">Principal</div>
       <button class="nav-item active" onclick="go('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
       <button class="nav-item" onclick="go('ingresos')"><span class="nav-icon">💰</span>Ingresos</button>
+      <button class="nav-item" onclick="go('pendientes')" id="nav-pendientes"><span class="nav-icon">📥</span>Pendientes Gmail <span id="nav-pend-badge" style="display:none;background:var(--amber);color:#000;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;margin-left:4px"></span></button>
       <button class="nav-item" onclick="go('registrar')"><span class="nav-icon">➕</span>Registrar gasto</button>
       <div class="nav-group">Módulos</div>
       <button class="nav-item" onclick="go('efectivo')"><span class="nav-icon">💵</span>Efectivo</button>
@@ -632,18 +645,7 @@ input,select,textarea,button{font-family:var(--font)}
           <div class="page-title">Registrar gasto</div>
           <div class="page-sub">Ingresa los datos del gasto y el tipo de pago</div>
         </div>
-        <!-- PANEL PENDIENTES DE APROBAR -->
-        <div id="panel-pendientes" class="panel mb14" style="display:none;border-color:rgba(59,130,246,0.3)">
-          <div class="panel-head">
-            <div class="panel-title">📥 Pendientes de aprobar <span id="pend-count-badge" class="badge badge-warn" style="margin-left:6px"></span></div>
-            <button class="btn btn-blue btn-sm" onclick="scanGmail()" id="btn-scan-gmail">🔍 Buscar en Gmail</button>
-          </div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
-            Pagos detectados automáticamente desde Gmail · Plin (efectivo) y Diners. Agrega el motivo, categoría y confirma.
-          </div>
-          <div id="pend-scan-status"></div>
-          <div id="pend-list"></div>
-        </div>
+
         <div class="panel mb14">
           <div class="panel-head"><div class="panel-title">Nuevo registro</div></div>
 
@@ -660,18 +662,30 @@ input,select,textarea,button{font-family:var(--font)}
           <div class="fg">
             <div class="field" id="g-cat-wrap"><label>🏷 Categoría</label>
               <select id="g-cat" onchange="onCatChange()">
-                <option value="Almuerzo">🍱 Almuerzo</option>
-                <option value="Mercado">🛒 Mercado</option>
-                <option value="Salida">🎉 Salida</option>
-                <option value="Transporte">🚌 Transporte</option>
-                <option value="Salud">💊 Salud</option>
-                <option value="Educación">📚 Educación</option>
-                <option value="Ropa">👕 Ropa</option>
-                <option value="Servicios">⚡ Servicios</option>
-                <option value="Tecnología">💻 Tecnología</option>
-                <option value="Entretenimiento">🎬 Entretenimiento</option>
-                <option value="Hogar">🏠 Hogar</option>
-                <option value="Otros">📦 Otros</option>
+                <optgroup label="🚗 Movilidad">
+                  <option value="Transporte público">🚌 Transporte público</option>
+                  <option value="Metropolitano">🚍 Metropolitano</option>
+                  <option value="Taxi">🚕 Taxi</option>
+                  <option value="Gasolina">⛽ Gasolina</option>
+                  <option value="Bus">🚌 Bus</option>
+                </optgroup>
+                <optgroup label="🍽 Comida">
+                  <option value="Desayuno">☕ Desayuno</option>
+                  <option value="Almuerzo">🍱 Almuerzo</option>
+                  <option value="Cena">🍽 Cena</option>
+                  <option value="Mercado">🛒 Mercado</option>
+                </optgroup>
+                <optgroup label="── Otras categorías ──">
+                  <option value="Salida">🎉 Salida</option>
+                  <option value="Tecnología">💻 Tecnología</option>
+                  <option value="Salud">💊 Salud</option>
+                  <option value="Educación">📚 Educación</option>
+                  <option value="Ropa">👕 Ropa</option>
+                  <option value="Servicios">⚡ Servicios</option>
+                  <option value="Hogar">🏠 Hogar</option>
+                  <option value="Entretenimiento">🎬 Entretenimiento</option>
+                  <option value="Otros">📦 Otros</option>
+                </optgroup>
               </select>
             </div>
             <div class="field"><label>📅 Fecha</label><input type="date" id="g-fecha"></div>
@@ -1385,6 +1399,36 @@ input,select,textarea,button{font-family:var(--font)}
         </div>
       </div>
 
+      <!-- ═══ PENDIENTES GMAIL ═══ -->
+      <div class="page" id="page-pendientes">
+        <div class="page-header">
+          <div class="page-title">📥 Pendientes de aprobar</div>
+          <div class="page-sub">Pagos detectados desde Gmail · Plin y Diners</div>
+        </div>
+        <div class="panel mb14">
+          <div class="panel-head">
+            <div class="panel-title">Importar desde Gmail</div>
+            <button class="btn btn-blue btn-sm" onclick="scanGmail()" id="btn-scan-gmail">🔍 Buscar nuevos</button>
+          </div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+            Busca automáticamente correos de <strong style="color:var(--accent)">Plin</strong> y <strong style="color:var(--amber)">Diners</strong> no registrados aún. El trigger nocturno los detecta solo cada noche.
+          </div>
+          <div id="pend-scan-status"></div>
+        </div>
+        <!-- Lista de pendientes -->
+        <div id="panel-pendientes" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div style="font-size:13px;font-weight:600;color:var(--text2)">
+              Registros pendientes <span id="pend-count-badge" class="badge badge-warn" style="margin-left:6px"></span>
+            </div>
+          </div>
+          <div id="pend-list"></div>
+        </div>
+        <div id="pend-empty" style="display:none">
+          <div class="empty" style="padding:40px">✅ Sin pendientes. Todo al día.</div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -1424,6 +1468,7 @@ input,select,textarea,button{font-family:var(--font)}
   <div class="mob-drawer-body">
     <div class="mob-drawer-group">Principal</div>
     <button class="mob-drawer-item" onclick="mobGo('ingresos')"><span class="di-icon">💰</span>Ingresos</button>
+    <button class="mob-drawer-item" onclick="mobGo('pendientes')"><span class="di-icon">📥</span>Pendientes Gmail</button>
     <button class="mob-drawer-item" onclick="mobGo('pluxee')"><span class="di-icon">🍽</span>Pluxee Perú</button>
     <div class="mob-drawer-group">Módulos</div>
     <button class="mob-drawer-item" onclick="mobGo('comida')"><span class="di-icon">🍱</span>Comida</button>
@@ -1448,16 +1493,42 @@ input,select,textarea,button{font-family:var(--font)}
 // ══════════════════════════════════════════════════════
 const API = 'https://script.google.com/macros/s/AKfycbx3N9-I9pWRFVTP18eROLl9tnTuHqbGWeKkfv6uu4dLwUEeRAI4GvRqIXVo4kmFAZ5K/exec';
 
-const CATS = ['Almuerzo','Mercado','Salida','Transporte','Salud','Educación','Ropa','Servicios','Tecnología','Entretenimiento','Hogar','Otros'];
+// Categorías principales
+const CATS_PRINCIPALES = ['Movilidad','Comida','Salida','Tecnología','Salud','Educación','Ropa','Servicios','Hogar','Entretenimiento','Otros'];
+// Subcategorías
+const SUBCATS = {
+  'Movilidad': ['Transporte público','Metropolitano','Taxi','Gasolina','Bus'],
+  'Comida':    ['Desayuno','Almuerzo','Cena','Mercado']
+};
+// Para compatibilidad con código existente
+const CATS = CATS_PRINCIPALES;
 const CAT_COLOR = {
-  Almuerzo:'#f59e0b',Mercado:'#10b981',Salida:'#8b5cf6',Transporte:'#14b8a6',
-  Salud:'#ef4444',Educación:'#3b82f6',Ropa:'#ec4899',Servicios:'#6366f1',
-  Tecnología:'#0ea5e9',Entretenimiento:'#a855f7',Hogar:'#f97316',Otros:'#6b7280',Ingreso:'#10b981'
+  // Principales con subcategorías
+  Movilidad:'#14b8a6','Transporte público':'#14b8a6',Metropolitano:'#14b8a6',
+  Taxi:'#0ea5e9',Gasolina:'#f59e0b',Bus:'#14b8a6',
+  Comida:'#10b981',Desayuno:'#10b981',Almuerzo:'#10b981',Cena:'#10b981',Mercado:'#10b981',
+  // Principales sin subcategorías
+  Salida:'#8b5cf6',Tecnología:'#0ea5e9',
+  // Independientes
+  Salud:'#ef4444',Educación:'#3b82f6',Ropa:'#ec4899',
+  Servicios:'#6366f1',Hogar:'#f97316',Entretenimiento:'#a855f7',
+  Otros:'#6b7280',Ingreso:'#10b981',
+  // Legado
+  Transporte:'#14b8a6'
 };
 const CAT_ICON = {
-  Almuerzo:'🍱',Mercado:'🛒',Salida:'🎉',Transporte:'🚌',Salud:'💊',
-  Educación:'📚',Ropa:'👕',Servicios:'⚡',Tecnología:'💻',Entretenimiento:'🎬',
-  Hogar:'🏠',Otros:'📦',Ingreso:'💰'
+  // Movilidad
+  Movilidad:'🚗','Transporte público':'🚌',Metropolitano:'🚍',
+  Taxi:'🚕',Gasolina:'⛽',Bus:'🚌',
+  // Comida
+  Comida:'🍽',Desayuno:'☕',Almuerzo:'🍱',Cena:'🍽',Mercado:'🛒',
+  // Principales
+  Salida:'🎉',Tecnología:'💻',
+  // Independientes
+  Salud:'💊',Educación:'📚',Ropa:'👕',Servicios:'⚡',
+  Hogar:'🏠',Entretenimiento:'🎬',Otros:'📦',Ingreso:'💰',
+  // Legado
+  Transporte:'🚌',Almuerzo:'🍱'
 };
 const HOGAR_DEPTOS = ['Lince','Villa Sol','Huandoy'];
 const HOGAR_CATS = ['Alquiler','Servicios básicos','Mantenimiento','Limpieza','Reparación','Otros'];
@@ -1650,8 +1721,12 @@ async function loadAll(){
     await reconciliarCuotas(); // Descuenta/elimina cuotas completadas automáticamente
     renderPage(document.querySelector('.page.active').id.replace('page-',''));
     updateSidebar();
-    // Cargar pendientes al iniciar (si está en página registrar)
-    cargarPendientes();
+    // Cargar badge de pendientes al iniciar
+    api('getPendientes',{}).then(r=>{
+      const n=(r.pendientes||[]).length;
+      const nb=document.getElementById('nav-pend-badge');
+      if(nb&&n>0){nb.style.display='';nb.textContent=n;}
+    }).catch(()=>{});
   }catch(e){
     document.getElementById('loader').innerHTML=`<div style="text-align:center;padding:2rem;max-width:400px"><div style="font-size:36px;margin-bottom:1rem">⚠️</div><div style="font-size:16px;color:#ef4444;font-weight:600">Error de conexión</div><div style="font-size:13px;color:#5a6280;margin:12px 0;line-height:1.6">Verifica que el Apps Script esté publicado con acceso: <em>Cualquier persona</em>.</div><button onclick="loadAll()" style="padding:9px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">↺ Reintentar</button></div>`;
   }
@@ -1668,8 +1743,7 @@ function go(id){
   renderPage(id);
 }
 function renderPage(id){
-  if(id==='registrar') cargarPendientes();
-  const map={dashboard:renderDashboard,ingresos:renderIngresos,registrar:renderRecent,efectivo:renderEfectivo,diners:renderDiners,comida:renderComida,movilidad:renderMovilidad,tecnologia:renderTecnologia,hogar:renderHogar,entretenimiento:renderEntretenimiento,pluxee:renderPluxee,recurrentes:renderRecurrentes,presupuesto:renderPresupuesto,anual:renderAnual,historial:renderHistorial};
+  const map={dashboard:renderDashboard,ingresos:renderIngresos,pendientes:renderPendientes,registrar:renderRecent,efectivo:renderEfectivo,diners:renderDiners,comida:renderComida,movilidad:renderMovilidad,tecnologia:renderTecnologia,hogar:renderHogar,entretenimiento:renderEntretenimiento,pluxee:renderPluxee,recurrentes:renderRecurrentes,presupuesto:renderPresupuesto,anual:renderAnual,historial:renderHistorial};
   if(map[id]) map[id]();
 }
 
@@ -1891,74 +1965,115 @@ async function confirmarImport(tipo,idx,id,fecha,monto,moneda){
 // ══════════════════════════════════════════════════════
 // PENDIENTES DE APROBAR (Gmail import via Apps Script)
 // ══════════════════════════════════════════════════════
-async function cargarPendientes(){
+function catSelectHTML(selectId){
+  return `<select id="pend-cat-${selectId}" style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none">
+    <optgroup label="🚗 Movilidad">
+      <option value="Transporte público">🚌 Transporte público</option>
+      <option value="Metropolitano">🚍 Metropolitano</option>
+      <option value="Taxi">🚕 Taxi</option>
+      <option value="Gasolina">⛽ Gasolina</option>
+      <option value="Bus">🚌 Bus</option>
+    </optgroup>
+    <optgroup label="🍽 Comida">
+      <option value="Desayuno">☕ Desayuno</option>
+      <option value="Almuerzo">🍱 Almuerzo</option>
+      <option value="Cena">🍽 Cena</option>
+      <option value="Mercado">🛒 Mercado</option>
+    </optgroup>
+    <optgroup label="── Otras ──">
+      <option value="Salida">🎉 Salida</option>
+      <option value="Tecnología">💻 Tecnología</option>
+      <option value="Salud">💊 Salud</option>
+      <option value="Educación">📚 Educación</option>
+      <option value="Ropa">👕 Ropa</option>
+      <option value="Servicios">⚡ Servicios</option>
+      <option value="Hogar">🏠 Hogar</option>
+      <option value="Entretenimiento">🎬 Entretenimiento</option>
+      <option value="Otros" selected>📦 Otros</option>
+    </optgroup>
+  </select>`;
+}
+
+async function cargarPendientes(){ await renderPendientes(); }
+
+async function renderPendientes(){
   try{
     const r=await api('getPendientes',{});
     const pends=r.pendientes||[];
     const panel=document.getElementById('panel-pendientes');
+    const emptyEl=document.getElementById('pend-empty');
     const badge=document.getElementById('pend-count-badge');
+    const navBadge=document.getElementById('nav-pend-badge');
     const list=document.getElementById('pend-list');
     if(!pends.length){
       if(panel)panel.style.display='none';
+      if(emptyEl)emptyEl.style.display='';
+      if(badge)badge.textContent='';
+      if(navBadge)navBadge.style.display='none';
       return;
     }
     if(panel)panel.style.display='';
-    if(badge)badge.textContent=pends.length+' nuevo'+(pends.length>1?'s':'');
+    if(emptyEl)emptyEl.style.display='none';
+    if(badge)badge.textContent=pends.length;
+    if(navBadge){navBadge.style.display='';navBadge.textContent=pends.length;}
     if(list) list.innerHTML=pends.map((p,i)=>{
       const isUSD=p.moneda==='USD';
       const isPlin=p.tipo==='plin';
-      return `<div id="pend-row-${i}" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r2);padding:13px 15px;margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      return `<div id="pend-row-${i}" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px">
           <div>
-            <div style="font-size:13px;font-weight:600">${isPlin?'💸':'💳'} ${p.descripcion}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">
-              📅 ${p.fecha} · ${isPlin?'Efectivo (Plin)':'Diners Club'}
-            </div>
+            <div style="font-size:14px;font-weight:600">${isPlin?'💸 Plin':'💳 Diners'} <span style="font-size:11px;color:var(--text3);font-weight:400">· ${p.fecha}</span></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:3px">${p.descripcion}</div>
           </div>
-          <span style="font-size:16px;font-weight:700;font-family:var(--mono);color:${isUSD?'var(--sky)':'var(--red)'};white-space:nowrap">
-            ${isUSD?'US$ ':'S/ '}${Number(p.monto).toFixed(2)}${isUSD?' 🇺🇸':''}
-          </span>
+          <span style="font-size:17px;font-weight:700;font-family:var(--mono);color:${isUSD?'var(--sky)':'var(--red)'}">${isUSD?'US$ ':'S/ '}${Number(p.monto).toFixed(2)}${isUSD?' 🇺🇸':''}</span>
         </div>
-        <!-- Motivo editable -->
-        <div style="margin-bottom:${isUSD?'8':'10'}px">
-          <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">📋 Motivo (editable antes de registrar)</label>
+        <div style="margin-bottom:10px">
+          <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">📋 Descripción / Motivo</label>
           <input type="text" id="pend-motivo-${i}" value="${p.descripcion}"
             style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none"
-            placeholder="Ej. Almuerzo, pasaje, compra...">
+            placeholder="Ej. Almuerzo, pasaje, cena...">
         </div>
-        <!-- Categoría -->
         <div style="margin-bottom:10px">
           <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">🏷 Categoría</label>
-          <select id="pend-cat-${i}" style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;-webkit-appearance:none">
-            <option value="Almuerzo">🍱 Almuerzo</option>
-            <option value="Mercado">🛒 Mercado</option>
-            <option value="Salida">🎉 Salida</option>
-            <option value="Transporte">🚌 Transporte / Movilidad</option>
-            <option value="Taxi">🚕 Taxi</option>
-            <option value="Salud">💊 Salud</option>
-            <option value="Educación">📚 Educación</option>
-            <option value="Ropa">👕 Ropa</option>
-            <option value="Servicios">⚡ Servicios</option>
-            <option value="Tecnología">💻 Tecnología</option>
-            <option value="Entretenimiento">🎬 Entretenimiento</option>
-            <option value="Hogar">🏠 Hogar</option>
-            <option value="Otros" selected>📦 Otros</option>
-          </select>
+          ${catSelectHTML(i)}
         </div>
-        ${isUSD?`<div style="margin-bottom:10px">
+        ${!isPlin&&isUSD?`<div style="margin-bottom:10px">
           <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">💱 Tipo de cambio (S/ por US$)</label>
           <input type="number" id="pend-tc-${i}" value="${localStorage.getItem('lastTC')||'3.75'}" step="0.001"
-            style="width:140px;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none">
+            style="width:150px;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none">
+        </div>`:''}
+        ${!isPlin?`<div style="margin-bottom:10px;padding:10px 12px;background:var(--s3);border-radius:var(--r);border:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <label style="font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="pend-cuotas-${i}" style="accent-color:var(--accent);width:14px;height:14px" onchange="togglePendCuotas(${i})">
+            ¿Es en cuotas?
+          </label>
+          <div id="pend-cuotas-det-${i}" style="display:none;gap:6px;flex-wrap:wrap;align-items:center">
+            <select id="pend-ncuotas-${i}" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px;color:var(--text);font-size:12px;outline:none">
+              <option value="2">2 cuotas</option><option value="3">3 cuotas</option>
+              <option value="6">6 cuotas</option><option value="9">9 cuotas</option>
+              <option value="12">12 cuotas</option><option value="18">18 cuotas</option><option value="24">24 cuotas</option>
+            </select>
+            <select id="pend-tipocuota-${i}" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px;color:var(--text);font-size:12px;outline:none">
+              <option value="cuotas-sin-int">Sin interés</option>
+              <option value="cuotas-con-int">Con interés</option>
+            </select>
+          </div>
         </div>`:''}
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-blue btn-sm" onclick="aprobarPendiente(${i},'${p.id}','${p.moneda||'PEN'}')">✅ Aprobar y registrar</button>
+          <button class="btn btn-blue btn-sm" onclick="aprobarPendiente(${i},'${p.id}','${isPlin?'PEN':p.moneda||'PEN'}','${isPlin}')">✅ Registrar</button>
           <button class="btn btn-ghost btn-sm" onclick="rechazarPendiente(${i},'${p.id}')">🗑 Ignorar</button>
         </div>
       </div>`;
     }).join('');
   }catch(e){
-    console.error('Error cargando pendientes:',e);
+    console.error('Error:',e);
   }
+}
+
+function togglePendCuotas(i){
+  const chk=document.getElementById(`pend-cuotas-${i}`);
+  const det=document.getElementById(`pend-cuotas-det-${i}`);
+  if(det)det.style.display=chk.checked?'flex':'none';
 }
 
 async function scanGmail(){
@@ -1982,19 +2097,30 @@ async function scanGmail(){
   }
 }
 
-async function aprobarPendiente(idx,id,moneda){
+async function aprobarPendiente(idx,id,moneda,isPlinStr){
   const btn=event.target;
   btn.disabled=true; btn.textContent='⏳';
+  const isPlin=isPlinStr==='true';
   const motivo=document.getElementById(`pend-motivo-${idx}`).value.trim();
   const catEl=document.getElementById(`pend-cat-${idx}`);
   const categoria=catEl?catEl.value:'Otros';
   let tc='';
-  if(moneda==='USD'){
+  // Solo Diners puede tener USD y cuotas
+  if(!isPlin&&moneda==='USD'){
     tc=document.getElementById(`pend-tc-${idx}`)?.value||'3.75';
     try{localStorage.setItem('lastTC',tc);}catch(e){}
   }
+  // Cuotas (solo Diners)
+  let tipoPago='directo', nCuotas='';
+  if(!isPlin){
+    const chk=document.getElementById(`pend-cuotas-${idx}`);
+    if(chk&&chk.checked){
+      tipoPago=document.getElementById(`pend-tipocuota-${idx}`)?.value||'cuotas-sin-int';
+      nCuotas=document.getElementById(`pend-ncuotas-${idx}`)?.value||'';
+    }
+  }
   try{
-    const r=await api('aprobarPendiente',{id,motivo,tipoCambio:tc,categoria});
+    const r=await api('aprobarPendiente',{id,motivo,tipoCambio:tc,categoria,tipoPago,nCuotas});
     if(r.ok){
       const tx={...r.tx,amount:parseFloat(r.tx.monto)};
       txs.unshift(tx);
