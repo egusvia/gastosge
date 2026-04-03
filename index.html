@@ -587,21 +587,7 @@ input,select,textarea,button{font-family:var(--font)}
           <div class="page-sub">Registra tu sueldo, ventas y otros ingresos</div>
         </div>
 
-        <!-- PANEL IMPORTAR DESDE PLIN/INTERBANK -->
-        <div class="panel mb14" style="border-color:rgba(59,130,246,0.3)">
-          <div class="panel-head">
-            <div class="panel-title">📧 Importar pagos Plin desde Gmail</div>
-            <button class="btn btn-blue btn-sm" id="btn-import-plin" onclick="importarCorreos('plin')">🔍 Buscar correos Plin</button>
-          </div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-            Busca desde la última consulta para evitar duplicados. Revisa cada pago, edita el motivo si quieres, y confirma con un clic.
-          </div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:12px">
-            🕐 Última búsqueda Plin: <span id="plin-last-check">nunca</span>
-          </div>
-          <div id="plin-import-status"></div>
-          <div id="plin-import-list"></div>
-        </div>
+
 
         <div class="panel mb14">
           <div class="panel-head"><div class="panel-title">Nuevo ingreso</div></div>
@@ -1033,21 +1019,7 @@ input,select,textarea,button{font-family:var(--font)}
           </div>
         </div>
 
-        <!-- PANEL IMPORTAR DINERS DESDE GMAIL -->
-        <div class="panel mb14" style="border-color:rgba(245,158,11,0.3)">
-          <div class="panel-head">
-            <div class="panel-title">📧 Importar consumos Diners desde Gmail</div>
-            <button class="btn btn-blue btn-sm" id="btn-import-diners" onclick="importarCorreos('diners')">🔍 Buscar correos</button>
-          </div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-            Detecta consumos de <strong style="color:var(--amber)">Diners Club</strong> desde tu correo. Busca desde la última consulta para evitar duplicados.
-          </div>
-          <div style="font-size:11px;color:var(--text3);margin-bottom:12px">
-            🕐 Última búsqueda Diners: <span id="diners-last-check">nunca</span>
-          </div>
-          <div id="diners-import-status"></div>
-          <div id="diners-import-list"></div>
-        </div>
+
 
         <!-- Pagar estado de cuenta -->
         <div class="panel mb14" id="dc-pago-panel">
@@ -1380,14 +1352,7 @@ input,select,textarea,button{font-family:var(--font)}
           <span class="alert-ico">ℹ️</span>
           <span><strong>Gastos hormiga</strong> = suscripciones y apps pequeñas (Spotify, Netflix, Claude Pro). Se registran automáticamente. <strong>Pagos fijos</strong> = alquileres, servicios grandes — los registras manualmente cuando los pagas.</span>
         </div>
-        <!-- Panel eliminar txs incorrectas del mes -->
-        <div class="panel mb14" id="rec-fix-panel">
-          <div class="panel-head"><div class="panel-title" style="color:var(--amber)">🧹 Transacciones registradas por error este mes</div></div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
-            Si el botón de registro automático incluyó pagos fijos por error (alquileres, etc.), búscalos en el <strong>Historial</strong> y elimínalos desde ahí con el botón ✕. También puedes ir a <strong>Efectivo → Registros del período</strong> para verlos y borrarlos.
-          </div>
-          <button class="btn btn-ghost btn-sm" onclick="go('historial')">📋 Ir al historial para limpiar</button>
-        </div>
+
         <!-- KPIs -->
         <div class="cards" id="rec-cards"></div>
 
@@ -1964,11 +1929,12 @@ async function cargarPendientes(){
         <!-- Categoría -->
         <div style="margin-bottom:10px">
           <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">🏷 Categoría</label>
-          <select id="pend-cat-${i}" style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none">
+          <select id="pend-cat-${i}" style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none;-webkit-appearance:none">
             <option value="Almuerzo">🍱 Almuerzo</option>
             <option value="Mercado">🛒 Mercado</option>
             <option value="Salida">🎉 Salida</option>
-            <option value="Transporte">🚌 Transporte</option>
+            <option value="Transporte">🚌 Transporte / Movilidad</option>
+            <option value="Taxi">🚕 Taxi</option>
             <option value="Salud">💊 Salud</option>
             <option value="Educación">📚 Educación</option>
             <option value="Ropa">👕 Ropa</option>
@@ -2163,7 +2129,6 @@ async function addIngreso(){
   const tipo=document.getElementById('ing-tipo').value;
   const fecha=document.getElementById('ing-fecha').value||today();
   const motivo=document.getElementById('ing-motivo').value.trim();
-  if(!gastoTipo||gastoTipo===''){toast('Selecciona el tipo de gasto','warn');return;}
   if(!monto||monto<=0){toast('Ingresa un monto válido','warn');return;}
   const btn=document.getElementById('btn-ing');btn.disabled=true;btn.textContent='Guardando...';
   const tx={id:String(Date.now()),fecha,descripcion:desc||tipo,monto:String(monto),tipo:'ingreso',categoria:'Ingreso',ingresoTipo:tipo,motivo};
