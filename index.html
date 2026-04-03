@@ -563,18 +563,6 @@ input,select,textarea,button{font-family:var(--font)}
           <div class="page-sub">Resumen financiero del mes</div>
         </div>
         <div id="dash-deficit"></div>
-        <!-- PANEL PENDIENTES DE APROBAR -->
-        <div id="panel-pendientes" style="display:none" class="panel mb14" style="border-color:rgba(59,130,246,0.3)">
-          <div class="panel-head">
-            <div class="panel-title">📥 Pendientes de aprobar <span id="pend-count-badge" class="badge badge-warn" style="margin-left:6px"></span></div>
-            <button class="btn btn-ghost btn-sm" onclick="scanGmail()" id="btn-scan-gmail">🔍 Buscar ahora</button>
-          </div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
-            Pagos detectados automáticamente desde Gmail. Agrega el motivo y confirma cada uno.
-          </div>
-          <div id="pend-scan-status"></div>
-          <div id="pend-list"></div>
-        </div>
         <div class="cards" id="dash-cards"></div>
         <div class="panels wide">
           <div class="panel mb14">
@@ -657,6 +645,18 @@ input,select,textarea,button{font-family:var(--font)}
         <div class="page-header">
           <div class="page-title">Registrar gasto</div>
           <div class="page-sub">Ingresa los datos del gasto y el tipo de pago</div>
+        </div>
+        <!-- PANEL PENDIENTES DE APROBAR -->
+        <div id="panel-pendientes" class="panel mb14" style="display:none;border-color:rgba(59,130,246,0.3)">
+          <div class="panel-head">
+            <div class="panel-title">📥 Pendientes de aprobar <span id="pend-count-badge" class="badge badge-warn" style="margin-left:6px"></span></div>
+            <button class="btn btn-blue btn-sm" onclick="scanGmail()" id="btn-scan-gmail">🔍 Buscar en Gmail</button>
+          </div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+            Pagos detectados automáticamente desde Gmail · Plin (efectivo) y Diners. Agrega el motivo, categoría y confirma.
+          </div>
+          <div id="pend-scan-status"></div>
+          <div id="pend-list"></div>
         </div>
         <div class="panel mb14">
           <div class="panel-head"><div class="panel-title">Nuevo registro</div></div>
@@ -1685,7 +1685,7 @@ async function loadAll(){
     await reconciliarCuotas(); // Descuenta/elimina cuotas completadas automáticamente
     renderPage(document.querySelector('.page.active').id.replace('page-',''));
     updateSidebar();
-    // Cargar pendientes de Gmail al iniciar
+    // Cargar pendientes al iniciar (si está en página registrar)
     cargarPendientes();
   }catch(e){
     document.getElementById('loader').innerHTML=`<div style="text-align:center;padding:2rem;max-width:400px"><div style="font-size:36px;margin-bottom:1rem">⚠️</div><div style="font-size:16px;color:#ef4444;font-weight:600">Error de conexión</div><div style="font-size:13px;color:#5a6280;margin:12px 0;line-height:1.6">Verifica que el Apps Script esté publicado con acceso: <em>Cualquier persona</em>.</div><button onclick="loadAll()" style="padding:9px 20px;background:#3b82f6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">↺ Reintentar</button></div>`;
@@ -1703,7 +1703,7 @@ function go(id){
   renderPage(id);
 }
 function renderPage(id){
-  if(id==='dashboard') cargarPendientes();
+  if(id==='registrar') cargarPendientes();
   const map={dashboard:renderDashboard,ingresos:renderIngresos,registrar:renderRecent,efectivo:renderEfectivo,diners:renderDiners,comida:renderComida,movilidad:renderMovilidad,tecnologia:renderTecnologia,hogar:renderHogar,entretenimiento:renderEntretenimiento,pluxee:renderPluxee,recurrentes:renderRecurrentes,presupuesto:renderPresupuesto,anual:renderAnual,historial:renderHistorial};
   if(map[id]) map[id]();
 }
@@ -1961,6 +1961,24 @@ async function cargarPendientes(){
             style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none"
             placeholder="Ej. Almuerzo, pasaje, compra...">
         </div>
+        <!-- Categoría -->
+        <div style="margin-bottom:10px">
+          <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">🏷 Categoría</label>
+          <select id="pend-cat-${i}" style="width:100%;background:var(--s3);border:1px solid var(--border2);border-radius:var(--r);padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);outline:none">
+            <option value="Almuerzo">🍱 Almuerzo</option>
+            <option value="Mercado">🛒 Mercado</option>
+            <option value="Salida">🎉 Salida</option>
+            <option value="Transporte">🚌 Transporte</option>
+            <option value="Salud">💊 Salud</option>
+            <option value="Educación">📚 Educación</option>
+            <option value="Ropa">👕 Ropa</option>
+            <option value="Servicios">⚡ Servicios</option>
+            <option value="Tecnología">💻 Tecnología</option>
+            <option value="Entretenimiento">🎬 Entretenimiento</option>
+            <option value="Hogar">🏠 Hogar</option>
+            <option value="Otros" selected>📦 Otros</option>
+          </select>
+        </div>
         ${isUSD?`<div style="margin-bottom:10px">
           <label style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;display:block;margin-bottom:4px">💱 Tipo de cambio (S/ por US$)</label>
           <input type="number" id="pend-tc-${i}" value="${localStorage.getItem('lastTC')||'3.75'}" step="0.001"
@@ -2002,13 +2020,15 @@ async function aprobarPendiente(idx,id,moneda){
   const btn=event.target;
   btn.disabled=true; btn.textContent='⏳';
   const motivo=document.getElementById(`pend-motivo-${idx}`).value.trim();
+  const catEl=document.getElementById(`pend-cat-${idx}`);
+  const categoria=catEl?catEl.value:'Otros';
   let tc='';
   if(moneda==='USD'){
     tc=document.getElementById(`pend-tc-${idx}`)?.value||'3.75';
     try{localStorage.setItem('lastTC',tc);}catch(e){}
   }
   try{
-    const r=await api('aprobarPendiente',{id,motivo,tipoCambio:tc});
+    const r=await api('aprobarPendiente',{id,motivo,tipoCambio:tc,categoria});
     if(r.ok){
       const tx={...r.tx,amount:parseFloat(r.tx.monto)};
       txs.unshift(tx);
